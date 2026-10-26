@@ -39,4 +39,11 @@ public class RequestsService : IRequestsService
 
         return request.ToDto();
     }
+
+    public async Task<RequestStatsDto> GetStatsAsync(CancellationToken cancellationToken)
+    {
+        var counts = await _repository.GetCountsAsync(cancellationToken);
+
+        return counts.ToStatsDto();
+    }
 }

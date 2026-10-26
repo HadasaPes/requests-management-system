@@ -38,6 +38,20 @@ public class RequestsRepository : IRequestsRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
 
+    public async Task<RequestCounts> GetCountsAsync(CancellationToken cancellationToken)
+    {
+        // One round trip: GROUP BY (Status, Priority) returns at most 4 x 3 = 12 small rows.
+        // The per-status and per-priority totals are then summed from those rows, never from requests.
+        var groups = await _dbContext.Requests
+            .GroupBy(r => new { r.Status, r.Priority })
+            .Select(g => new { g.Key.Status, g.Key.Priority, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return new RequestCounts(
+            groups.GroupBy(g => g.Status).ToDictionary(s => s.Key, s => s.Sum(g => g.Count)),
+            groups.GroupBy(g => g.Priority).ToDictionary(p => p.Key, p => p.Sum(g => g.Count)));
+    }
+
     private static IQueryable<Request> ApplyFilters(IQueryable<Request> source, RequestQuery query)
     {
         if (query.Status is { } status)

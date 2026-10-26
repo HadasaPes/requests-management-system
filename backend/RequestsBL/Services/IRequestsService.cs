@@ -10,4 +10,7 @@ public interface IRequestsService
 
     /// <exception cref="NotFoundException">No request with this id exists.</exception>
     Task<RequestDto> GetRequestByIdAsync(int id, CancellationToken cancellationToken);
+
+    /// <summary>Counts of all requests per status and priority (global, no filters).</summary>
+    Task<RequestStatsDto> GetStatsAsync(CancellationToken cancellationToken);
 }

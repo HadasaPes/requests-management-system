@@ -27,6 +27,14 @@ public class RequestsController : ControllerBase
         [FromQuery] RequestQueryParameters parameters, CancellationToken cancellationToken) =>
         Ok(await _requestsService.GetRequestsAsync(parameters, cancellationToken));
 
+    /// <summary>Dashboard summary: number of requests per status and per priority (all requests, no filters).</summary>
+    /// <response code="200">Counts, including statuses and priorities with zero requests.</response>
+    // "stats" is a literal segment and {id} only matches integers, so the two routes never conflict.
+    [HttpGet("stats")]
+    [ProducesResponseType(typeof(RequestStatsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<RequestStatsDto>> GetStats(CancellationToken cancellationToken) =>
+        Ok(await _requestsService.GetStatsAsync(cancellationToken));
+
     /// <summary>Gets one request by id.</summary>
     /// <param name="id">Request id.</param>
     /// <param name="cancellationToken">Cancelled when the client disconnects.</param>

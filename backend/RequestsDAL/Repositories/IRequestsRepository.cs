@@ -9,4 +9,7 @@ public interface IRequestsRepository
 
     /// <summary>Returns the request, or null if it does not exist.</summary>
     Task<Request?> GetByIdAsync(int id, CancellationToken cancellationToken);
+
+    /// <summary>Counts all requests per status and per priority with one GROUP BY query.</summary>
+    Task<RequestCounts> GetCountsAsync(CancellationToken cancellationToken);
 }
