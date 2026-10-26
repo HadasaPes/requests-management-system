@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RequestsDAL.Data;
+using RequestsDAL.Repositories;
 
 namespace RequestsDAL;
 
@@ -13,8 +14,7 @@ public static class DataAccessLayerServiceCollectionExtensions
         // AddDbContext registers the context with a Scoped lifetime (one per HTTP request).
         services.AddDbContext<RequestsDbContext>(options => options.UseSqlServer(connectionString));
 
-        // Repositories are registered here as Scoped, e.g.:
-        // services.AddScoped<IRequestsRepository, RequestsRepository>();
+        services.AddScoped<IRequestsRepository, RequestsRepository>();
 
         return services;
     }
