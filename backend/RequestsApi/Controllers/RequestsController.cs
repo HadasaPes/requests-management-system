@@ -45,4 +45,37 @@ public class RequestsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
     public async Task<ActionResult<RequestDto>> GetRequestById(int id, CancellationToken cancellationToken) =>
         Ok(await _requestsService.GetRequestByIdAsync(id, cancellationToken));
+
+    /// <summary>Changes the status of a request (optimistic concurrency with rowVersion).</summary>
+    /// <remarks>
+    /// Allowed transitions: New → InProgress; InProgress → Waiting or Completed; Waiting → InProgress. Completed is final.
+    /// Send the rowVersion from the last GET; the response contains the new rowVersion.
+    /// </remarks>
+    /// <param name="id">Request id.</param>
+    /// <param name="update">New status, rowVersion and who makes the change.</param>
+    /// <param name="cancellationToken">Cancelled when the client disconnects.</param>
+    /// <response code="200">The updated request, with its new rowVersion.</response>
+    /// <response code="400">Invalid input, or the transition is not allowed.</response>
+    /// <response code="404">No request with this id exists.</response>
+    /// <response code="409">The request was changed by someone else since it was read. Reload and retry.</response>
+    [HttpPatch("{id:int}/status")]
+    [Consumes("application/json")]
+    [ProducesResponseType(typeof(RequestDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
+    public async Task<ActionResult<RequestDto>> UpdateStatus(
+        int id, [FromBody] UpdateStatusRequestDto update, CancellationToken cancellationToken) =>
+        Ok(await _requestsService.UpdateStatusAsync(id, update, cancellationToken));
+
+    /// <summary>Status change history of a request, newest first.</summary>
+    /// <param name="id">Request id.</param>
+    /// <param name="cancellationToken">Cancelled when the client disconnects.</param>
+    /// <response code="200">The history (empty if the status never changed).</response>
+    /// <response code="404">No request with this id exists.</response>
+    [HttpGet("{id:int}/history")]
+    [ProducesResponseType(typeof(IReadOnlyList<RequestStatusHistoryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<ActionResult<IReadOnlyList<RequestStatusHistoryDto>>> GetHistory(int id, CancellationToken cancellationToken) =>
+        Ok(await _requestsService.GetHistoryAsync(id, cancellationToken));
 }

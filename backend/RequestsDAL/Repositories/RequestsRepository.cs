@@ -52,6 +52,59 @@ public class RequestsRepository : IRequestsRepository
             groups.GroupBy(g => g.Priority).ToDictionary(p => p.Key, p => p.Sum(g => g.Count)));
     }
 
+    public Task<Request?> GetByIdForUpdateAsync(int id, CancellationToken cancellationToken) =>
+        _dbContext.Requests.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+
+    public async Task<StatusUpdateResult> UpdateStatusAsync(
+        Request request,
+        RequestStatus newStatus,
+        byte[] expectedRowVersion,
+        string changedBy,
+        DateTime changedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        _dbContext.RequestStatusHistory.Add(new RequestStatusHistory
+        {
+            RequestId = request.Id,
+            PreviousStatus = request.Status,
+            NewStatus = newStatus,
+            ChangedAt = changedAtUtc,
+            ChangedBy = changedBy
+        });
+
+        request.Status = newStatus;
+        request.UpdatedAt = changedAtUtc;
+
+        // The client's RowVersion becomes the "original" value, so EF generates
+        // UPDATE ... WHERE [Id] = @id AND [RowVersion] = @expectedRowVersion.
+        _dbContext.Entry(request).Property(r => r.RowVersion).OriginalValue = expectedRowVersion;
+
+        try
+        {
+            // One SaveChanges = one transaction: the UPDATE and the history INSERT succeed or fail together.
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return StatusUpdateResult.Updated;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // The UPDATE matched 0 rows: someone else changed the request. Everything was rolled back;
+            // drop the pending changes so nothing is saved by a later SaveChanges on this context.
+            _dbContext.ChangeTracker.Clear();
+            return StatusUpdateResult.Conflict;
+        }
+    }
+
+    public Task<bool> ExistsAsync(int id, CancellationToken cancellationToken) =>
+        _dbContext.Requests.AnyAsync(r => r.Id == id, cancellationToken);
+
+    public async Task<IReadOnlyList<RequestStatusHistory>> GetHistoryAsync(int requestId, CancellationToken cancellationToken) =>
+        await _dbContext.RequestStatusHistory
+            .AsNoTracking()
+            .Where(h => h.RequestId == requestId)
+            .OrderByDescending(h => h.ChangedAt)
+            .ThenByDescending(h => h.Id)
+            .ToListAsync(cancellationToken);
+
     private static IQueryable<Request> ApplyFilters(IQueryable<Request> source, RequestQuery query)
     {
         if (query.Status is { } status)

@@ -29,9 +29,11 @@ public static class RequestQueryValidator
             errors["pageSize"] = [$"Page size must be between 1 and {MaxPageSize}."];
         }
 
-        var status = ParseOptionalEnum<RequestStatus>(parameters.Status, "status", errors);
-        var priority = ParseOptionalEnum<RequestPriority>(parameters.Priority, "priority", errors);
-        var sortBy = ParseOptionalEnum<RequestSortField>(parameters.SortBy, "sortBy", errors) ?? RequestSortField.CreatedAt;
+        var status = EnumParsing.ParseOptional<RequestStatus>(parameters.Status, "status", errors);
+        var priority = EnumParsing.ParseOptional<RequestPriority>(parameters.Priority, "priority", errors);
+        // sortBy values are shown in camelCase (createdAt) to match the query-string style.
+        var sortBy = EnumParsing.ParseOptional<RequestSortField>(parameters.SortBy, "sortBy", errors, camelCaseNames: true)
+            ?? RequestSortField.CreatedAt;
 
         var sortDescending = true;
         if (!string.IsNullOrWhiteSpace(parameters.SortDirection))
@@ -80,34 +82,6 @@ public static class RequestQueryValidator
             PageSize = parameters.PageSize
         };
     }
-
-    /// <summary>
-    /// Matches enum names only (case-insensitive). Unlike Enum.TryParse, numbers such as "1" are rejected.
-    /// </summary>
-    private static TEnum? ParseOptionalEnum<TEnum>(string? value, string field, Dictionary<string, string[]> errors)
-        where TEnum : struct, Enum
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        var trimmed = value.Trim();
-        var names = Enum.GetNames<TEnum>();
-        var match = names.FirstOrDefault(name => name.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
-        if (match is not null)
-        {
-            return Enum.Parse<TEnum>(match);
-        }
-
-        var allowed = string.Join(", ", names.Select(name => FormatAllowedName(name, field)));
-        errors[field] = [$"'{trimmed}' is not a valid {field}. Allowed values: {allowed}."];
-        return null;
-    }
-
-    // sortBy values are shown in camelCase (createdAt) to match the query-string style; enum values as-is (InProgress).
-    private static string FormatAllowedName(string name, string field) =>
-        field == "sortBy" ? char.ToLowerInvariant(name[0]) + name[1..] : name;
 
     // Model binding turns "...Z" / "+02:00" into local time; values without an offset are treated as UTC.
     private static DateTime? ToUtc(DateTime? value) => value switch

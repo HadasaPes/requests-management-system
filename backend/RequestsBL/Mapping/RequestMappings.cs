@@ -21,6 +21,15 @@ public static class RequestMappings
         RowVersion = Convert.ToBase64String(request.RowVersion)
     };
 
+    public static RequestStatusHistoryDto ToDto(this RequestStatusHistory history) => new()
+    {
+        Id = history.Id,
+        PreviousStatus = history.PreviousStatus.ToString(),
+        NewStatus = history.NewStatus.ToString(),
+        ChangedAt = DateTime.SpecifyKind(history.ChangedAt, DateTimeKind.Utc),
+        ChangedBy = history.ChangedBy
+    };
+
     public static RequestStatsDto ToStatsDto(this RequestCounts counts)
     {
         var byStatus = CountForEveryValue(counts.ByStatus);

@@ -8,3 +8,4 @@
 | T2.1 | Global exception handler, custom BL exceptions, ProblemDetails | Reviewed the status code and body for each exception type, checked that no stack trace or secret reaches the client |
 | T2.2-T2.4 | GET endpoints with filtering, search, sorting, paging and validation | Reviewed the generated SQL, checked all validation errors, found and fixed the createdTo boundary so the whole last day is included |
 | T2.5 | Aggregations by status and priority | Checked that the counts add up to the total and reviewed the generated SQL |
+| T3.1-T3.2 | Status update with optimistic concurrency (rowVersion), transition rules, audit history in the same transaction | Checked the UPDATE SQL has RowVersion in the WHERE clause, ran parallel updates (exactly one 200 and one 409 each time, one history row), checked 400/404 cases and the history endpoint |
