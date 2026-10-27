@@ -76,6 +76,7 @@ public class BulkUpdateStatusTests : IntegrationTestBase
     [Theory]
     [InlineData("101 items")]
     [InlineData("duplicate ids")]
+    [InlineData("empty list")]
     public async Task BulkUpdateStatus_InvalidRequest_Returns400AndChangesNothing(string invalidCase)
     {
         // Arrange: the items use the real, current rowVersions, so without the request-level
@@ -95,6 +96,7 @@ public class BulkUpdateStatusTests : IntegrationTestBase
                 .Where(i => i.id is TestData.Ids.AcmeNewLow or TestData.Ids.GlobexNewHigh)
                 .Append(realItems.Single(i => i.id == TestData.Ids.AcmeNewLow))
                 .ToList(),
+            "empty list" => realItems.Take(0).ToList(),
             _ => throw new ArgumentOutOfRangeException(nameof(invalidCase))
         };
 

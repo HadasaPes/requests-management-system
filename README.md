@@ -51,7 +51,7 @@
 | עדכון `UpdatedAt` ו-`RowVersion` | `RequestsRepository.UpdateStatusAsync` | נבדק ב-`PATCH` אמיתי (ראו תוצאות אימות) |
 | **3. היסטוריה:** שורה באותה טרנזקציה, בלי שורה כשהעדכון נכשל (גם ב-Bulk) | שורת ההיסטוריה והעדכון באותו `SaveChanges` | בדיקות ה-Concurrency, ה-Bulk המעורב, המעבר הלא חוקי וה-Bulk הלא תקין בודקות את מספר שורות ההיסטוריה (1 למצליח, 0 לנכשל) |
 | Endpoint להיסטוריה | `GET /api/requests/{id}/history`, `RequestsRepository.GetHistoryAsync` | `GetHistory_AfterSuccessfulUpdate_ReturnsEntryWithAllFields`, `GetHistory_UnknownId_Returns404` |
-| **4. Bulk:** עד 100, Partial Success | `RequestsService.BulkUpdateStatusAsync`, `StatusUpdateValidator` (`MaxBulkItems = 100`) | `BulkUpdateStatus_MixedItems_ReturnsOutcomePerItemAndChangesOnlyValidItems`; `BulkUpdateStatus_InvalidRequest_Returns400AndChangesNothing` (101 פריטים, מזהים כפולים); [סעיף 8](#8-bulk-update) |
+| **4. Bulk:** עד 100, Partial Success | `RequestsService.BulkUpdateStatusAsync`, `StatusUpdateValidator` (`MaxBulkItems = 100`) | `BulkUpdateStatus_MixedItems_ReturnsOutcomePerItemAndChangesOnlyValidItems`; `BulkUpdateStatus_InvalidRequest_Returns400AndChangesNothing` (101 פריטים, מזהים כפולים, רשימה ריקה); [סעיף 8](#8-bulk-update) |
 | **5. Angular:** `debounceTime` על החיפוש בלבד | `requests-page.ts` (`search$`) | קוד; [סעיף 4](#4-מבנה-הפתרון) |
 | `switchMap` שמבטל בקשה קודמת | `requests-page.ts` (`loads$`) | קוד |
 | Loading / Empty / Error עם Retry | `requests-page.html` (`list.loading`, `totalCount === 0`, `list.error` עם `retry()`) | קוד |
@@ -61,7 +61,7 @@
 | הפרדה בין Components ל-Services | רק `core/services/requests-api.service.ts` משתמש ב-`HttpClient`; רכיבי התצוגה עובדים עם `input()`/`output()` בלבד | חיפוש בקוד (ראו דגשים) |
 | **6. ביצועים:** Execution Plans, אינדקסים, צוואר בקבוק ושיפור | `RequestsDAL/Data/Configurations`, 2 Migrations, Rebuild ב-`02_seed.sql` | [`performance.md`](docs/performance.md) ו-17 קובצי `.sqlplan`; השוואה לפני ואחרי אינדקס |
 | **7. Cache:** Expiration, Invalidation, Scale-out | `RequestsService` (`StatsCacheDuration` של 60 שניות, `_cache.Remove` אחרי כל עדכון מוצלח) | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately`; [`cache.md`](docs/cache.md) |
-| **8. בדיקות** | `backend/RequestsApi.Tests`: 30 בדיקות (12 Integration מול LocalDB, 18 Unit) | [`tests.md`](docs/tests.md) |
+| **8. בדיקות** | `backend/RequestsApi.Tests`: 31 בדיקות (13 Integration מול LocalDB, 18 Unit) | [`tests.md`](docs/tests.md) |
 | **9. תכנון עבודה** | – | [`work-plan.md`](docs/work-plan.md) |
 | **10. איכות קוד** | 3 שכבות שנאכפות בקומפילציה, `ProblemDetails` אחיד (`GlobalExceptionHandler`) | `dotnet build`: 0 אזהרות |
 | **11. תיעוד** | README זה, [`docs/`](docs/) | [`ai-usage.md`](docs/ai-usage.md), [`known-limitations.md`](docs/known-limitations.md) |
@@ -70,7 +70,7 @@
 
 נבדק ב-27.10.2026 על `git clone` נקי של commit `ff39d85`, לפי [סעיף 3](#3-הוראות-הרצה) (דרך א' ליצירת ה-DB):
 
-- `dotnet test`: **25 בדיקות, כולן עברו** (`Failed: 0`). אחרי שנוספו 5 בדיקות (מעבר לא חוקי, היסטוריה ו-Validation של Bulk), הורץ שוב: **30 בדיקות, כולן עברו**.
+- `dotnet test`: **25 בדיקות, כולן עברו** (`Failed: 0`). אחרי שנוספו 5 בדיקות (מעבר לא חוקי, היסטוריה ו-Validation של Bulk), הורץ שוב: **30 בדיקות, כולן עברו**. אחרי שנוספה בדיקה לרשימה ריקה ב-Bulk: **31 בדיקות, כולן עברו**.
 - `ng build --configuration production`: הסתיים **בלי אזהרות ובלי שגיאות**.
 - `02_seed.sql`: בדיוק **100,000** שורות ב-`Requests` (כ-6 שניות, ועוד כשנייה ל-Rebuild).
 - הוראות ההרצה עבדו מקצה לקצה: `01_schema.sql`, `02_seed.sql`, `npm install`, ה-API (Swagger מחזיר `200`) והאפליקציה (`200`, הרשימה וה-Stats מוצגים ב-Chrome).
@@ -455,7 +455,7 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 
 ## 10. בדיקות אוטומטיות
 
-30 בדיקות ב-`backend/RequestsApi.Tests`: 12 Integration Tests עם `WebApplicationFactory<Program>` מול SQL Server LocalDB, ו-18 Unit Tests לכללי המעבר.
+31 בדיקות ב-`backend/RequestsApi.Tests`: 13 Integration Tests עם `WebApplicationFactory<Program>` מול SQL Server LocalDB, ו-18 Unit Tests לכללי המעבר.
 
 | נבדק | סוג |
 |---|---|
@@ -466,7 +466,7 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 | מעבר לא חוקי (`Completed → New`) מחזיר `400`, והסטטוס, ה-`RowVersion` וה-`UpdatedAt` לא משתנים ב-DB, ואין שורת היסטוריה | Integration |
 | ההיסטוריה אחרי עדכון מוצלח: רשומה אחת עם כל השדות; מזהה שלא קיים מחזיר `404` | Integration |
 | Bulk מעורב: תוצאה נכונה לכל פריט, ורק הפריטים התקינים השתנו ב-DB | Integration |
-| Bulk לא תקין (101 פריטים, מזהים כפולים) מחזיר `400` ולא משנה אף פנייה ולא מוסיף היסטוריה | Integration |
+| Bulk לא תקין (101 פריטים, מזהים כפולים, רשימה ריקה) מחזיר `400` ולא משנה אף פנייה ולא מוסיף היסטוריה | Integration |
 | ה-Stats מתעדכנים מיד אחרי `PATCH` מוצלח (Cache Invalidation) | Integration |
 | כללי המעבר ו-`allowedNextStatuses` (`[Theory]`) | Unit |
 
