@@ -33,6 +33,7 @@ public class GetRequestsTests : IntegrationTestBase
             Assert.Equal("New", r.Status);
             Assert.Equal("High", r.Priority);
             Assert.Equal(TestData.Acme, r.OrganizationName);
+            Assert.Equal(["InProgress"], r.AllowedNextStatuses);
         });
     }
 

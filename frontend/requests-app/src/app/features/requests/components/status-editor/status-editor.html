@@ -1,0 +1,26 @@
+<button
+  type="button"
+  class="trigger"
+  [matMenuTriggerFor]="menu"
+  [disabled]="disabled()"
+  [title]="hint()"
+  [attr.aria-label]="'Status: ' + status() + '. ' + hint()"
+>
+  <span class="chip status-{{ status() }}">
+    {{ status() }}
+    @if (!disabled()) {
+      <span aria-hidden="true">▾</span>
+    }
+  </span>
+  @if (saving()) {
+    <mat-spinner diameter="16" />
+  }
+</button>
+
+<mat-menu #menu="matMenu">
+  @for (next of allowedNext(); track next) {
+    <button mat-menu-item type="button" (click)="statusSelected.emit(next)">
+      Change to <span class="chip status-{{ next }}">{{ next }}</span>
+    </button>
+  }
+</mat-menu>

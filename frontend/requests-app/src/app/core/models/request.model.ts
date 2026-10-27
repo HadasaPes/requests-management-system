@@ -16,4 +16,6 @@ export interface RequestDto {
   updatedAt: string;
   /** Base64; sent back when changing the status (optimistic concurrency). */
   rowVersion: string;
+  /** The statuses this request can be changed to next, from the API's transition rules (empty when Completed). */
+  allowedNextStatuses: RequestStatus[];
 }

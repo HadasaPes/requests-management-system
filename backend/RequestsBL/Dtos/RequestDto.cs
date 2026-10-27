@@ -25,4 +25,7 @@ public record RequestDto
 
     /// <summary>Concurrency token (base64). Send it back unchanged when updating this request.</summary>
     public string RowVersion { get; init; } = string.Empty;
+
+    /// <summary>The statuses this request can be changed to next (empty when Completed).</summary>
+    public IReadOnlyList<string> AllowedNextStatuses { get; init; } = [];
 }

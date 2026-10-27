@@ -1,0 +1,36 @@
+<h2 mat-dialog-title>History of request #{{ request.id }}</h2>
+
+<mat-dialog-content>
+  <p class="subtitle">{{ request.title }}</p>
+
+  @if (state$ | async; as state) {
+    @if (state.kind === 'loading') {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading history" />
+    } @else if (state.kind === 'error') {
+      <div class="error" role="alert">
+        <p>{{ state.error.message }}</p>
+        <button matButton="filled" type="button" (click)="retry()">Retry</button>
+      </div>
+    } @else if (state.entries.length === 0) {
+      <p class="muted">No status changes yet.</p>
+    } @else {
+      <ol class="entries">
+        @for (entry of state.entries; track entry.id) {
+          <li>
+            <div class="change">
+              <span class="chip status-{{ entry.previousStatus }}">{{ entry.previousStatus }}</span>
+              <span aria-label="to">→</span>
+              <span class="chip status-{{ entry.newStatus }}">{{ entry.newStatus }}</span>
+            </div>
+            <!-- changedAt is UTC; the date pipe shows it in local time. -->
+            <div class="meta">by <b>{{ entry.changedBy }}</b> · {{ entry.changedAt | date: 'd MMM y, HH:mm:ss' }}</div>
+          </li>
+        }
+      </ol>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton type="button" mat-dialog-close>Close</button>
+</mat-dialog-actions>

@@ -31,4 +31,18 @@ public class StatusTransitionsTests
         Assert.Equal(expectedAllowed, error is null);
         Assert.Equal(expectedAllowed, StatusTransitions.IsAllowed(from, to));
     }
+
+    [Theory]
+    [InlineData(RequestStatus.New, new[] { RequestStatus.InProgress })]
+    [InlineData(RequestStatus.InProgress, new[] { RequestStatus.Waiting, RequestStatus.Completed })]
+    [InlineData(RequestStatus.Waiting, new[] { RequestStatus.InProgress })]
+    [InlineData(RequestStatus.Completed, new RequestStatus[0])]
+    public void GetAllowedNext_Status_ReturnsExactlyTheAllowedTransitions(RequestStatus from, RequestStatus[] expected)
+    {
+        // Act
+        var allowedNext = StatusTransitions.GetAllowedNext(from);
+
+        // Assert
+        Assert.Equal(expected, allowedNext);
+    }
 }

@@ -1,0 +1,18 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:not(:disabled):hover .chip {
+    filter: brightness(0.95);
+    outline: 1px solid currentColor;
+  }
+}

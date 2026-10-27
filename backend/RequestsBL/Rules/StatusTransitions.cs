@@ -22,6 +22,9 @@ public static class StatusTransitions
 
     public static bool IsAllowed(RequestStatus from, RequestStatus to) => Allowed[from].Contains(to);
 
+    /// <summary>The statuses a request can move to next; empty for Completed.</summary>
+    public static IReadOnlyList<RequestStatus> GetAllowedNext(RequestStatus from) => Allowed[from];
+
     /// <summary>Returns why the transition is not allowed, or null if it is allowed.</summary>
     public static string? GetError(RequestStatus from, RequestStatus to)
     {

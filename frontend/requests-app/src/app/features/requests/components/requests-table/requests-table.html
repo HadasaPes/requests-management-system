@@ -25,7 +25,15 @@
 
     <ng-container matColumnDef="status">
       <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-      <td mat-cell *matCellDef="let r"><span class="chip status-{{ r.status }}">{{ r.status }}</span></td>
+      <td mat-cell *matCellDef="let r">
+        <app-status-editor
+          [status]="r.status"
+          [allowedNext]="r.allowedNextStatuses"
+          [canEdit]="canEdit()"
+          [saving]="savingIds().has(r.id)"
+          (statusSelected)="statusChange.emit({ request: r, status: $event })"
+        />
+      </td>
     </ng-container>
 
     <ng-container matColumnDef="priority">
@@ -53,6 +61,15 @@
     <ng-container matColumnDef="updatedAt">
       <th mat-header-cell *matHeaderCellDef mat-sort-header>Updated</th>
       <td mat-cell *matCellDef="let r" class="date">{{ r.updatedAt | date: 'd MMM y, HH:mm' }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef><span class="cdk-visually-hidden">Actions</span></th>
+      <td mat-cell *matCellDef="let r">
+        <button matButton type="button" (click)="historyOpen.emit(r)" [attr.aria-label]="'History of request ' + r.id">
+          History
+        </button>
+      </td>
     </ng-container>
 
     <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>

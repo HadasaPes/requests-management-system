@@ -1,4 +1,20 @@
-<mat-toolbar>Requests Management</mat-toolbar>
+<mat-toolbar>
+  <span>Requests Management</span>
+  <span class="spacer"></span>
+  <mat-form-field class="user-name" subscriptSizing="dynamic">
+    <mat-label>Your name</mat-label>
+    <input
+      matInput
+      [value]="currentUser.name()"
+      (input)="onNameInput($event)"
+      [attr.maxlength]="maxNameLength"
+      autocomplete="name"
+    />
+    @if (!currentUser.hasName()) {
+      <mat-hint>Required to change a status</mat-hint>
+    }
+  </mat-form-field>
+</mat-toolbar>
 
 <main>
   <router-outlet />

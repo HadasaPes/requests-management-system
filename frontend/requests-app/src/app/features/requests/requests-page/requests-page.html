@@ -40,8 +40,12 @@
           [page]="list.query.page"
           [pageSize]="list.query.pageSize"
           [sort]="list.query"
+          [canEdit]="currentUser.hasName()"
+          [savingIds]="savingIds()"
           (sortChange)="onSortChange($event)"
           (pageChange)="onPageChange($event)"
+          (statusChange)="onStatusChange($event)"
+          (historyOpen)="openHistory($event)"
         />
       }
     }

@@ -1,0 +1,29 @@
+.subtitle,
+.muted,
+.meta {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.entries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
