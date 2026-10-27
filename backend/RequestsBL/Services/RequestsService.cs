@@ -19,6 +19,11 @@ public class RequestsService : IRequestsService
     private const string StatsCacheKey = "requests:stats";
     private static readonly TimeSpan StatsCacheDuration = TimeSpan.FromSeconds(60);
 
+    // Incremented on every invalidation. Static because the service is scoped while the cache is shared.
+    // A stats calculation stores its result only if no invalidation happened while it ran.
+    private static long _statsGeneration;
+    private static readonly object StatsCacheLock = new();
+
     private readonly IRequestsRepository _repository;
     private readonly IMemoryCache _cache;
     private readonly ILogger<RequestsService> _logger;
@@ -64,10 +69,18 @@ public class RequestsService : IRequestsService
         }
 
         _logger.LogDebug("Stats cache miss.");
+        var generation = Interlocked.Read(ref _statsGeneration);
         var stats = (await _repository.GetCountsAsync(cancellationToken)).ToStatsDto();
 
-        // Absolute expiration: the entry is dropped 60 s after it was stored, even if it is read often.
-        _cache.Set(StatsCacheKey, stats, StatsCacheDuration);
+        lock (StatsCacheLock)
+        {
+            // If a status changed while the query ran, these numbers may be old: return them, but do not cache them.
+            if (_statsGeneration == generation)
+            {
+                // Absolute expiration: the entry is dropped 60 s after it was stored, even if it is read often.
+                _cache.Set(StatsCacheKey, stats, StatsCacheDuration);
+            }
+        }
 
         return stats;
     }
@@ -196,7 +209,11 @@ public class RequestsService : IRequestsService
 
         // Every successful change (single or bulk item) goes through here, so the stats are never
         // invalidated by a failed item, and a bulk with zero updates leaves the cache untouched.
-        _cache.Remove(StatsCacheKey);
+        lock (StatsCacheLock)
+        {
+            _statsGeneration++;
+            _cache.Remove(StatsCacheKey);
+        }
         return new ChangeResult(ChangeOutcome.Updated);
     }
 

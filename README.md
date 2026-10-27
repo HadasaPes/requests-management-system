@@ -61,7 +61,7 @@
 | היסטוריה ב-UI | `request-history-dialog` (Loading / Empty / Error) | נבדק ב-Chrome (הדיאלוג מציג את השינויים); מצבי Empty ו-Error בקוד |
 | הפרדה בין Components ל-Services | רק `core/services/requests-api.service.ts` משתמש ב-`HttpClient`; רכיבי התצוגה עובדים עם `input()`/`output()` בלבד | חיפוש בקוד (ראו דגשים) |
 | **6. ביצועים:** Execution Plans, אינדקסים, צוואר בקבוק ושיפור | `RequestsDAL/Data/Configurations`, 2 Migrations, Rebuild ב-`02_seed.sql` | [`performance.md`](docs/performance.md) ו-17 קובצי `.sqlplan`; השוואה לפני ואחרי אינדקס |
-| **7. Cache:** Expiration, Invalidation, Scale-out | `RequestsService` (`StatsCacheDuration` של 60 שניות, `_cache.Remove` אחרי כל עדכון מוצלח) | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately`; [`cache.md`](docs/cache.md) |
+| **7. Cache:** Expiration, Invalidation, Scale-out | `RequestsService` (`StatsCacheDuration` של 60 שניות, `_cache.Remove` אחרי כל עדכון מוצלח, ומונה Generation שמונע שמירת מספרים ישנים) | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately`; [`cache.md`](docs/cache.md) |
 | **8. בדיקות** | `backend/RequestsApi.Tests`: 31 בדיקות (13 Integration מול LocalDB, 18 Unit); Angular: 6 בדיקות (Vitest) ב-3 קבצים | [`tests.md`](docs/tests.md) |
 | **9. תכנון עבודה** | – | [`work-plan.md`](docs/work-plan.md) |
 | **10. איכות קוד** | 3 שכבות שנאכפות בקומפילציה, `ProblemDetails` אחיד (`GlobalExceptionHandler`) | `dotnet build`: 0 אזהרות |
@@ -448,9 +448,10 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 - **למה דווקא זה:** זו השאילתה היקרה ביותר (`GROUP BY` על כל הטבלה). היא גלובלית (בלי פילטרים), כך שמפתח אחד משרת את כל המשתמשים, והיא נקראת הרבה יותר משהנתונים משתנים. רשימות ופניות בודדות לא נשמרות ב-Cache, כי הן תלויות בפילטרים, וכי הלקוח חייב לקבל את ה-`rowVersion` העדכני.
 - **Expiration:** מוחלט, 60 שניות.
 - **Invalidation:** אחרי כל שינוי סטטוס **מוצלח**, בעדכון בודד ובכל פריט מוצלח ב-Bulk. Bulk שאף פריט בו לא הצליח לא מוחק את ה-Cache.
+- **חישוב שהתחיל לפני עדכון:** מונה דורות (Generation) סטטי מוגדל בכל Invalidation, בתוך Lock. חישוב Stats שומר את התוצאה ב-Cache רק אם המונה לא השתנה בזמן השאילתה, כך שמספרים ישנים לא נשמרים אחרי Invalidation.
 - **כמה שרתים:** `IMemoryCache` נמצא בזיכרון של תהליך אחד, ולכן Invalidation בשרת אחד לא מנקה את השרתים האחרים. פתרונות אפשריים: Cache משותף (Redis עם `IDistributedCache`), הודעת Invalidation לכל השרתים (למשל Redis Pub/Sub), או להסתמך רק על Expiration קצר.
 
-הפרטים, כולל הסיכון הקטן שנשאר: [`docs/cache.md`](docs/cache.md).
+הפרטים: [`docs/cache.md`](docs/cache.md).
 
 ---
 

@@ -24,10 +24,16 @@ they must be exact, because the client needs the current `rowVersion` to update 
   recalculates from the database.
 - Cache hit and miss are logged at Debug level.
 
-**Remaining risk (small):** a stats calculation can start *before* an update, and finish *after* the update has
-removed the entry. It then stores numbers that do not include that update. They stay in the cache until the next
-status change or until the 60 s expiration, whichever comes first. The window is a few milliseconds (the time of one
-`GROUP BY`), the result is only off by the changes made in that window, and the 60 s expiration limits how long it lasts.
+**No stale numbers after an invalidation:** a stats calculation can start *before* an update and finish *after* the
+update has removed the entry. Without protection, it would store numbers that do not include that update. A static
+generation counter (shared by all instances of the scoped service) prevents this:
+
+- Invalidation increments the counter and removes the entry, together inside a lock.
+- `GetStatsAsync` reads the counter before the query. After the query, inside the same lock, it stores the result
+  only if the counter has not changed. If it changed, the result is still returned to that caller, but not cached,
+  so the next call recalculates.
+
+This protects one process only. With several server instances, a shared cache is still needed (see below).
 
 ## Several server instances
 
