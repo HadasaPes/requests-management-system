@@ -16,11 +16,14 @@ public interface IRequestsRepository
     /// <summary>Returns the request tracked for a later <see cref="UpdateStatusAsync"/>, or null if it does not exist.</summary>
     Task<Request?> GetByIdForUpdateAsync(int id, CancellationToken cancellationToken);
 
+    /// <summary>Returns the existing requests among <paramref name="ids"/>, tracked, in one query.</summary>
+    Task<IReadOnlyList<Request>> GetByIdsForUpdateAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken);
+
     /// <summary>
-    /// Changes the status of a request loaded with <see cref="GetByIdForUpdateAsync"/> and adds the audit row,
-    /// in one transaction. The database only updates the row if its RowVersion still equals
-    /// <paramref name="expectedRowVersion"/>; otherwise nothing is saved and Conflict is returned.
-    /// On success, <paramref name="request"/> holds the new RowVersion.
+    /// Changes the status of a tracked request and adds the audit row, in one transaction (its own SaveChanges).
+    /// The database only updates the row if its RowVersion still equals
+    /// <paramref name="expectedRowVersion"/>; otherwise nothing is saved, the request is detached
+    /// and Conflict is returned. On success, <paramref name="request"/> holds the new RowVersion.
     /// </summary>
     Task<StatusUpdateResult> UpdateStatusAsync(
         Request request,

@@ -1,4 +1,3 @@
-using RequestsBL.Exceptions;
 using RequestsDAL.Entities;
 
 namespace RequestsBL.Rules;
@@ -23,17 +22,14 @@ public static class StatusTransitions
 
     public static bool IsAllowed(RequestStatus from, RequestStatus to) => Allowed[from].Contains(to);
 
-    /// <exception cref="ValidationException">The transition is not allowed.</exception>
-    public static void EnsureAllowed(RequestStatus from, RequestStatus to)
+    /// <summary>Returns why the transition is not allowed, or null if it is allowed.</summary>
+    public static string? GetError(RequestStatus from, RequestStatus to)
     {
         if (from == to)
         {
-            throw new ValidationException("status", $"The request is already {from}.");
+            return $"The request is already {from}.";
         }
 
-        if (!IsAllowed(from, to))
-        {
-            throw new ValidationException("status", $"Cannot change status from {from} to {to}.");
-        }
+        return IsAllowed(from, to) ? null : $"Cannot change status from {from} to {to}.";
     }
 }

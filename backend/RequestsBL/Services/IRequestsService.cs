@@ -20,6 +20,13 @@ public interface IRequestsService
     /// <exception cref="ConflictException">The request was changed by someone else since the client read it.</exception>
     Task<RequestDto> UpdateStatusAsync(int id, UpdateStatusRequestDto update, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Changes the status of up to 100 requests with partial success: each item is checked and saved
+    /// in its own transaction, and gets its own result (Updated, NotFound, Conflict, InvalidTransition).
+    /// </summary>
+    /// <exception cref="ValidationException">The request itself is invalid; no item was processed.</exception>
+    Task<BulkStatusUpdateResponseDto> BulkUpdateStatusAsync(BulkStatusUpdateRequestDto update, CancellationToken cancellationToken);
+
     /// <summary>Status changes of one request, newest first.</summary>
     /// <exception cref="NotFoundException">No request with this id exists.</exception>
     Task<IReadOnlyList<RequestStatusHistoryDto>> GetHistoryAsync(int id, CancellationToken cancellationToken);

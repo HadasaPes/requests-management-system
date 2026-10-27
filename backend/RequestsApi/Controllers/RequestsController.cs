@@ -68,6 +68,24 @@ public class RequestsController : ControllerBase
         int id, [FromBody] UpdateStatusRequestDto update, CancellationToken cancellationToken) =>
         Ok(await _requestsService.UpdateStatusAsync(id, update, cancellationToken));
 
+    /// <summary>Changes the status of up to 100 requests at once (partial success).</summary>
+    /// <remarks>
+    /// Each item has its own rowVersion and is saved in its own transaction, so one failed item never
+    /// blocks the others. Returns 200 whenever the request itself is valid; check each item's outcome:
+    /// Updated (with the new rowVersion), NotFound, Conflict or InvalidTransition (with the reason).
+    /// </remarks>
+    /// <param name="update">New status, who makes the change, and the items (id + rowVersion).</param>
+    /// <param name="cancellationToken">Cancelled when the client disconnects.</param>
+    /// <response code="200">One result per item, in the order they were sent.</response>
+    /// <response code="400">The request is invalid (e.g. 0 or more than 100 items, duplicate ids); nothing was changed.</response>
+    [HttpPost("bulk-status")]
+    [Consumes("application/json")]
+    [ProducesResponseType(typeof(BulkStatusUpdateResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    public async Task<ActionResult<BulkStatusUpdateResponseDto>> BulkUpdateStatus(
+        [FromBody] BulkStatusUpdateRequestDto update, CancellationToken cancellationToken) =>
+        Ok(await _requestsService.BulkUpdateStatusAsync(update, cancellationToken));
+
     /// <summary>Status change history of a request, newest first.</summary>
     /// <param name="id">Request id.</param>
     /// <param name="cancellationToken">Cancelled when the client disconnects.</param>

@@ -55,6 +55,13 @@ public class RequestsRepository : IRequestsRepository
     public Task<Request?> GetByIdForUpdateAsync(int id, CancellationToken cancellationToken) =>
         _dbContext.Requests.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
 
+    // One query: WHERE [Id] IN (SELECT [value] FROM OPENJSON(@ids)). Missing ids are simply not returned.
+    public async Task<IReadOnlyList<Request>> GetByIdsForUpdateAsync(
+        IReadOnlyCollection<int> ids, CancellationToken cancellationToken) =>
+        await _dbContext.Requests
+            .Where(r => ids.Contains(r.Id))
+            .ToListAsync(cancellationToken);
+
     public async Task<StatusUpdateResult> UpdateStatusAsync(
         Request request,
         RequestStatus newStatus,
@@ -63,14 +70,15 @@ public class RequestsRepository : IRequestsRepository
         DateTime changedAtUtc,
         CancellationToken cancellationToken)
     {
-        _dbContext.RequestStatusHistory.Add(new RequestStatusHistory
+        var history = new RequestStatusHistory
         {
             RequestId = request.Id,
             PreviousStatus = request.Status,
             NewStatus = newStatus,
             ChangedAt = changedAtUtc,
             ChangedBy = changedBy
-        });
+        };
+        _dbContext.RequestStatusHistory.Add(history);
 
         request.Status = newStatus;
         request.UpdatedAt = changedAtUtc;
@@ -87,9 +95,12 @@ public class RequestsRepository : IRequestsRepository
         }
         catch (DbUpdateConcurrencyException)
         {
-            // The UPDATE matched 0 rows: someone else changed the request. Everything was rolled back;
-            // drop the pending changes so nothing is saved by a later SaveChanges on this context.
-            _dbContext.ChangeTracker.Clear();
+            // The UPDATE matched 0 rows: someone else changed the request. Everything was rolled back.
+            // Detach only this request and its history row, so a later SaveChanges on this context
+            // (the next item of a bulk update) does not try to save them again. Other tracked
+            // requests stay tracked; ChangeTracker.Clear() would detach them too.
+            _dbContext.Entry(history).State = EntityState.Detached;
+            _dbContext.Entry(request).State = EntityState.Detached;
             return StatusUpdateResult.Conflict;
         }
     }
