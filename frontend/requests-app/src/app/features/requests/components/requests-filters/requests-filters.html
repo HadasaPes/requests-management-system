@@ -1,0 +1,50 @@
+<div class="filters">
+  <mat-form-field class="search" subscriptSizing="dynamic">
+    <mat-label>Search title or organization</mat-label>
+    <input matInput type="search" [formControl]="search" maxlength="100" autocomplete="off" />
+  </mat-form-field>
+
+  <ng-container [formGroup]="form">
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Status</mat-label>
+      <mat-select formControlName="status">
+        <mat-option [value]="null">All</mat-option>
+        @for (status of statuses; track status) {
+          <mat-option [value]="status">{{ status }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Priority</mat-label>
+      <mat-select formControlName="priority">
+        <mat-option [value]="null">All</mat-option>
+        @for (priority of priorities; track priority) {
+          <mat-option [value]="priority">{{ priority }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Organization (exact)</mat-label>
+      <input matInput formControlName="organizationName" (keydown.enter)="apply($event)" autocomplete="off" />
+    </mat-form-field>
+
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Assigned to (exact)</mat-label>
+      <input matInput formControlName="assignedTo" (keydown.enter)="apply($event)" autocomplete="off" />
+    </mat-form-field>
+
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Created from</mat-label>
+      <input matInput type="date" formControlName="createdFrom" />
+    </mat-form-field>
+
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Created to</mat-label>
+      <input matInput type="date" formControlName="createdTo" />
+    </mat-form-field>
+  </ng-container>
+
+  <button matButton type="button" (click)="clear()">Clear</button>
+</div>

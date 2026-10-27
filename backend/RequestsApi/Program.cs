@@ -19,6 +19,16 @@ builder.Services.AddProblemDetails(options =>
     });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+// The Angular dev server runs on another origin; production would serve the app from the API's origin or configure its own origins.
+const string DevFrontendCorsPolicy = "DevFrontend";
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options => options.AddPolicy(DevFrontendCorsPolicy, policy => policy
+        .WithOrigins("http://localhost:4200")
+        .AllowAnyHeader()
+        .AllowAnyMethod()));
+}
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -32,7 +42,14 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// First in the pipeline, so it catches exceptions from everything after it.
+// Before the exception handler, so error responses (ProblemDetails) also get the CORS headers
+// and the Angular app can read their message.
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors(DevFrontendCorsPolicy);
+}
+
+// Catches exceptions from everything after it.
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

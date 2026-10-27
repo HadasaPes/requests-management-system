@@ -1,0 +1,49 @@
+@if (stats$ | async; as statsState) {
+  <app-requests-stats [stats]="statsState.stats" [failed]="statsState.failed" />
+} @else {
+  <app-requests-stats [stats]="null" />
+}
+
+<app-requests-filters
+  (searchChange)="onSearchChange($event)"
+  (filtersChange)="onFiltersChange($event)"
+/>
+
+<!-- One subscription to the list stream for the whole view. -->
+@if (list$ | async; as list) {
+  <div class="list">
+    <div class="progress">
+      @if (list.loading) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading requests" />
+      }
+    </div>
+
+    @if (list.error; as error) {
+      <div class="message error" role="alert">
+        <p>{{ error.message }}</p>
+        @if (error.details.length) {
+          <ul>
+            @for (detail of error.details; track $index) {
+              <li>{{ detail }}</li>
+            }
+          </ul>
+        }
+        <button matButton="filled" type="button" (click)="retry()">Retry</button>
+      </div>
+    } @else if (list.result && list.query) {
+      @if (list.result.totalCount === 0) {
+        <p class="message">No requests match your filters.</p>
+      } @else {
+        <app-requests-table
+          [items]="list.result.items"
+          [totalCount]="list.result.totalCount"
+          [page]="list.query.page"
+          [pageSize]="list.query.pageSize"
+          [sort]="list.query"
+          (sortChange)="onSortChange($event)"
+          (pageChange)="onPageChange($event)"
+        />
+      }
+    }
+  </div>
+}

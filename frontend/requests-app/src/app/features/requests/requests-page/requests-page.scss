@@ -1,0 +1,28 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Reserves the bar's height so the table does not move when loading starts or ends. */
+.progress {
+  height: 4px;
+}
+
+.message {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error {
+  color: var(--mat-sys-error);
+  background: var(--mat-sys-error-container);
+  border-radius: 12px;
+
+  ul {
+    display: inline-block;
+    margin: 0 0 16px;
+    text-align: left;
+  }
+}

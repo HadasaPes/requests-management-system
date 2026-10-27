@@ -1,0 +1,20 @@
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.title {
+  min-width: 240px;
+}
+
+.date {
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}

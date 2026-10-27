@@ -1,0 +1,30 @@
+<section class="stats" aria-label="Request statistics">
+  @if (stats(); as stats) {
+    <div class="card total">
+      <span class="label">Total requests</span>
+      <span class="value">{{ stats.totalCount | number }}</span>
+    </div>
+
+    <div class="card">
+      <span class="label">By status</span>
+      <div class="counts">
+        @for (status of statuses; track status) {
+          <span class="chip status-{{ status }}">{{ status }} <b>{{ stats.countByStatus[status] | number }}</b></span>
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="label">By priority</span>
+      <div class="counts">
+        @for (priority of priorities; track priority) {
+          <span class="chip priority-{{ priority }}">{{ priority }} <b>{{ stats.countByPriority[priority] | number }}</b></span>
+        }
+      </div>
+    </div>
+  } @else if (failed()) {
+    <p class="muted">Statistics are not available right now.</p>
+  } @else {
+    <p class="muted">Loading statistics…</p>
+  }
+</section>
