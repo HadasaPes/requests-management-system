@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using RequestsBL.Dtos;
 using RequestsBL.Exceptions;
@@ -14,12 +15,18 @@ public class RequestsService : IRequestsService
     private const string ConflictMessage =
         "The request was changed by someone else. Reload it and try again.";
 
+    // The stats are global (no filters), so one key is enough.
+    private const string StatsCacheKey = "requests:stats";
+    private static readonly TimeSpan StatsCacheDuration = TimeSpan.FromSeconds(60);
+
     private readonly IRequestsRepository _repository;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<RequestsService> _logger;
 
-    public RequestsService(IRequestsRepository repository, ILogger<RequestsService> logger)
+    public RequestsService(IRequestsRepository repository, IMemoryCache cache, ILogger<RequestsService> logger)
     {
         _repository = repository;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -50,9 +57,19 @@ public class RequestsService : IRequestsService
 
     public async Task<RequestStatsDto> GetStatsAsync(CancellationToken cancellationToken)
     {
-        var counts = await _repository.GetCountsAsync(cancellationToken);
+        if (_cache.TryGetValue(StatsCacheKey, out RequestStatsDto? cached))
+        {
+            _logger.LogDebug("Stats cache hit.");
+            return cached!;
+        }
 
-        return counts.ToStatsDto();
+        _logger.LogDebug("Stats cache miss.");
+        var stats = (await _repository.GetCountsAsync(cancellationToken)).ToStatsDto();
+
+        // Absolute expiration: the entry is dropped 60 s after it was stored, even if it is read often.
+        _cache.Set(StatsCacheKey, stats, StatsCacheDuration);
+
+        return stats;
     }
 
     public async Task<RequestDto> UpdateStatusAsync(
@@ -172,7 +189,15 @@ public class RequestsService : IRequestsService
             request, newStatus, rowVersion, changedBy, DateTime.UtcNow, cancellationToken);
 
         // Conflict here means someone else saved between our read and our UPDATE; the database rejected the UPDATE.
-        return new ChangeResult(result == StatusUpdateResult.Updated ? ChangeOutcome.Updated : ChangeOutcome.ConflictOnSave);
+        if (result == StatusUpdateResult.Conflict)
+        {
+            return new ChangeResult(ChangeOutcome.ConflictOnSave);
+        }
+
+        // Every successful change (single or bulk item) goes through here, so the stats are never
+        // invalidated by a failed item, and a bulk with zero updates leaves the cache untouched.
+        _cache.Remove(StatsCacheKey);
+        return new ChangeResult(ChangeOutcome.Updated);
     }
 
     public async Task<IReadOnlyList<RequestStatusHistoryDto>> GetHistoryAsync(int id, CancellationToken cancellationToken)
