@@ -2,6 +2,12 @@
 
 Measured on 2026-10-27 against `RequestsManagementDb` with 100,000 requests (fresh run of `database/02_seed.sql`).
 
+After the first measurements, two changes were made (see [Improvement made after measuring](#improvement-made-after-measuring)):
+the seed now rebuilds the indexes, and `IX_Requests_Priority` was replaced with `IX_Requests_Priority_CreatedAt`.
+Operation 1 and the priority queries were re-measured after these changes. The other operations (2-4) were measured
+before the rebuild, when the clustered index had 2,355 pages. It has 2,174 pages now, so their reads would be about 8% lower;
+the plans are the same.
+
 ## Method
 
 - **Data:** `02_seed.sql` re-run first (100,000 requests: New 35,222, InProgress 30,009, Waiting 20,009,
@@ -23,12 +29,12 @@ Measured on 2026-10-27 against `RequestsManagementDb` with 100,000 requests (fre
 
 | # | Operation | Main operators (actual rows) | Index used | Logical reads | CPU ms | Elapsed ms | Plan file |
 |---|-----------|------------------------------|------------|--------------:|-------:|-----------:|-----------|
-| 1a | `status=Waiting` COUNT | Index Seek (20,009) → Stream Aggregate | IX_Requests_Status_CreatedAt | 110 (50 after rebuild) | 0 | 3 | `1a_waiting_count` |
-| 1b | `status=Waiting` page 1, createdAt desc | Index Seek (20) → Key Lookup (20) → Top | IX_Requests_Status_CreatedAt + PK | 64 | 0 | 0 | `1b_waiting_page` |
+| 1a | `status=Waiting` COUNT | Index Seek (20,009) → Stream Aggregate | IX_Requests_Status_CreatedAt | **50** (110 before the rebuild) | 0 | 2 | `1a_waiting_count` |
+| 1b | `status=Waiting` page 1, createdAt desc | Index Seek (20) → Key Lookup (20) → Top | IX_Requests_Status_CreatedAt + PK | 63 (64 before the rebuild) | 0 | 0 | `1b_waiting_page` |
 | 2 | Stats `GROUP BY Status, Priority` | Clustered Index Scan (100,000) → Hash Match (12) | PK_Requests | 2,355 | 31 | 39 | `2_stats_groupby` |
 | 3a | `search=VPN` COUNT | Clustered Index Scan (100,000 read, 4,953 match) | PK_Requests | 2,355 | **468** | **472** | `3a_search_count` |
 | 3b | `search=VPN` page 1 | Index Scan backward (285) → Key Lookup → Top | IX_Requests_CreatedAt + PK | 876 | 0 | 3 | `3b_search_page` |
-| 4a | No filter COUNT | Index Scan (100,000) → Stream Aggregate | narrowest index (IX_Requests_Priority, later IX_Requests_Status_CreatedAt) | 315 / 237 | 16 | 14 | `4a_all_count` |
+| 4a | No filter COUNT | Index Scan (100,000) → Stream Aggregate | the narrowest index (it was IX_Requests_Priority) | 315 (237 after the rebuild) | 16 | 14 | `4a_all_count` |
 | 4b | Page 4000 (OFFSET 79,980), createdAt desc | Clustered Index Scan (100,000) → **Sort** (80,000) → Top | PK_Requests | 2,355 | 204 | 204 | `4b_deep_page_4000` |
 | 4c | Page 1, no filter, createdAt desc | Index Scan backward (20) → Key Lookup (20) → Top | IX_Requests_CreatedAt + PK | 64 | 0 | 0 | `4c_first_page_no_filter` |
 
@@ -36,8 +42,8 @@ Extra queries measured as evidence for the index analysis and bottlenecks:
 
 | Operation | Main operators | Index used | Logical reads | CPU ms | Elapsed ms | Plan file |
 |-----------|----------------|------------|--------------:|-------:|-----------:|-----------|
-| `priority=High` COUNT | Index Seek (24,944) | IX_Requests_Priority | 81 | 0 | 4 | `x_priority_high_count` |
-| `priority=High` page 1 | Index Scan backward (75) → Key Lookup | IX_Requests_CreatedAt + PK | 233 | 0 | 0 | `x_priority_high_page` |
+| `priority=High` COUNT (new index) | Index Seek (24,944) | IX_Requests_Priority_CreatedAt | 61 | 0 | 4 | `x_priority_high_count` |
+| `priority=High` page 1 (new index) | Index Seek (20) → Key Lookup (20) → Top | IX_Requests_Priority_CreatedAt + PK | 63 | 0 | 0 | `x_priority_high_page` |
 | Page 1 sorted by `updatedAt` | Clustered Index Scan (100,000) → Top N Sort | PK_Requests (no index on UpdatedAt) | 2,355 | 171 | 165 | `x_sort_updatedat_page` |
 | Page 1 reusing the deep-page plan | Clustered Index Scan → Sort | PK_Requests | 2,355 | 171 | 164 | `4c_..._reusing_deep_page_plan` |
 | Page 4000 reusing the page-1 plan | Index Scan (80,000) → **Key Lookup (80,000)** | IX_Requests_CreatedAt + PK | **245,443** | 188 | 192 | `4b_..._reusing_page1_plan` |
@@ -71,32 +77,63 @@ Plans: `1a_waiting_count[_without_index].sqlplan`, `1b_waiting_page[_without_ind
 
 | Index | Keys | Size | Why it exists | Used in the usage check (seeks / scans / lookups) |
 |-------|------|------|---------------|---------------------------------------------------|
-| PK_Requests (clustered) | Id | 2,355 pages, 18.4 MB | Get by id, Key Lookups, full scans | 2 / 11 / 19 |
+| PK_Requests (clustered) | Id | 2,174 pages, 17.0 MB | Get by id, Key Lookups, full scans | 2 / 11 / 19 |
 | IX_Requests_Status_CreatedAt | Status, CreatedAt | 237 pages, 1.9 MB | Status filter + date sort/range: the most common list query; also the narrowest index for an unfiltered COUNT | 9 / 15 / 0 |
-| IX_Requests_CreatedAt | CreatedAt | 558 pages, 4.4 MB | Default sort (createdAt desc) for any filter, date ranges, early stop for search | 2 / 10 / 0 |
-| IX_Requests_OrganizationName | OrganizationName | 847 pages, 6.6 MB | Organization filter (equality) | 2 / 2 / 0 |
-| IX_Requests_AssignedTo | AssignedTo | 620 pages, 4.8 MB | Assignee filter ("my requests") | 1 / 0 / 0 |
-| IX_Requests_Priority | Priority | 315 pages, 2.5 MB | Priority filter | 3 / 2 / 0 |
+| IX_Requests_CreatedAt | CreatedAt | 225 pages, 1.8 MB | Default sort (createdAt desc) for any filter, date ranges, early stop for search | 2 / 10 / 0 |
+| IX_Requests_OrganizationName | OrganizationName | 606 pages, 4.7 MB | Organization filter (equality) | 2 / 2 / 0 |
+| IX_Requests_AssignedTo | AssignedTo | 423 pages, 3.3 MB | Assignee filter ("my requests") | 1 / 0 / 0 |
+| IX_Requests_Priority_CreatedAt (replaced IX_Requests_Priority) | Priority, CreatedAt | 237 pages, 1.9 MB | Priority filter + date sort/range, like the status index | (old index: 3 / 2 / 0) |
 | IX_RequestStatusHistory_RequestId_ChangedAt | RequestId, ChangedAt | small | History of one request, newest first; FK | 1 / 0 / 0 |
 | PK_RequestStatusHistory (clustered) | Id | small | Key | 0 / 0 / 1 |
 
-**Every index was used** at least once. None is unused.
+Sizes are after the seed with the index rebuild. Usage counts are from the check made before the change.
+
+**Every index was used** at least once. None is unused. The analysis below led to the change described in
+[Improvement made after measuring](#improvement-made-after-measuring).
 
 **IX_Requests_Priority (low selectivity, 3 values):** I looked at it specifically.
 - It **is** used, but only for the **COUNT** with a priority filter: 81 reads instead of 2,355 for a clustered scan (about 16 ms → about 0 ms).
 - The priority **page** query does not use it. It uses IX_Requests_CreatedAt, because about 25% of rows match, so the 20 rows are found within the first 75.
 - Its cost is low: 2.5 MB, and it is never updated by status changes, because Priority does not change.
 - So it has a small but real benefit. I am **not** proposing to remove it.
-- A possible improvement (not done, needs your approval): replace it with `(Priority, CreatedAt)`, like the status index. Then the priority page query could also seek directly.
+- Proposed improvement: replace it with `(Priority, CreatedAt)`, like the status index, so the priority page query can also seek directly. **Done**, see below.
 
 **Fragmentation after the seed:**
-- All nonclustered indexes on Requests are **93-99% fragmented** right after `02_seed.sql`, because the seed inserts rows in Id order, so every secondary index receives keys in random order and splits pages. They are about 2x larger than needed.
-- IX_Requests_Status_CreatedAt shows the effect: 110 reads before re-create, 50 after.
-- A proposed fix (not done, needs your approval): add `ALTER INDEX ALL ON Requests REBUILD;` at the end of the seed script.
+- Before the fix, all nonclustered indexes on Requests were **93-99% fragmented** right after `02_seed.sql`. The seed inserts rows in Id order, so every secondary index receives keys in random order and splits pages. They were about 2x larger than needed.
+- IX_Requests_Status_CreatedAt showed the effect: 110 reads before re-create, 50 after.
+- Fix: **done**. `02_seed.sql` now ends with `ALTER INDEX ALL ON dbo.Requests REBUILD;` (about 0.8 s). Every index is now at 0% fragmentation after the seed.
 
 **LocalDB note:** the database has `AUTO_CLOSE ON` (LocalDB default). It closes when the last connection ends, which
 resets `sys.dm_db_index_usage_stats` and the plan cache. The usage check therefore kept one connection open. A real
 server has AUTO_CLOSE off.
+
+## Improvement made after measuring
+
+Two changes, both based on the numbers above:
+
+1. **Rebuild indexes at the end of the seed** (`database/02_seed.sql`). The indexes went from 93-99% to 0% fragmentation
+   and up to 2.5x fewer pages. Operation 1 COUNT went from 110 to 50 reads.
+2. **IX_Requests_Priority (Priority) → IX_Requests_Priority_CreatedAt (Priority, CreatedAt)**: migration
+   `ReplacePriorityIndexWithPriorityCreatedAt`, and `database/01_schema.sql` regenerated.
+
+`priority=High` (24,944 rows), sorted by createdAt desc, page 1. All three columns were measured with the same method; the middle column isolates the effect of the new index:
+
+| Query | Old index, fragmented (first measurement) | Old index, after rebuild | **New index (Priority, CreatedAt)** |
+|-------|------------------------------------------|--------------------------|-------------------------------------|
+| COUNT | Index Seek IX_Requests_Priority, 81 reads | Index Seek IX_Requests_Priority, 37 reads | Index Seek IX_Requests_Priority_CreatedAt, **61 reads** |
+| Page 1 | Index Scan IX_Requests_CreatedAt backwards (75 rows read to find 20 High) + 20 Key Lookups, 233 reads | same plan, 232 reads | **Index Seek** on `Priority = 2`, exactly 20 rows in order + 20 Key Lookups, **63 reads** |
+
+Plans: `x_priority_high_count_old_index` / `x_priority_high_page_old_index` (old index after rebuild) and
+`x_priority_high_count` / `x_priority_high_page` (new index).
+
+- **Page query: 3.7x fewer reads** (232 → 63), and the cost no longer depends on how common the priority is. With the old
+  index, a rare priority would read many CreatedAt entries to find 20 matches. Now it always reads exactly 20.
+- **COUNT: slightly more reads** (37 → 61), because each index entry is wider (it also stores CreatedAt). It is still a seek
+  on only the matching rows, and still about 40x fewer reads than a full scan.
+- **Write cost: unchanged in practice.** Priority and CreatedAt never change after insert, so status updates do not touch
+  this index. Size: 237 pages, the same as the status index.
+- The list API always runs the COUNT and the page together, so one priority list request costs 124 reads instead of
+  269 with the old index (both rebuilt).
 
 ## Bottlenecks and proposed improvements (not implemented)
 

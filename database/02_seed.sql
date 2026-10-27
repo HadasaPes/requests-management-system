@@ -191,3 +191,11 @@ COMMIT TRANSACTION;
 
 PRINT CONCAT(N'Inserted ', @RowCount, N' requests in ',
              DATEDIFF(MILLISECOND, @StartTime, SYSUTCDATETIME()), N' ms.');
+
+-- Rebuild all indexes on Requests. The rows are inserted in Id (clustered) order, so every nonclustered
+-- index receives its keys in random order and splits pages: right after the insert they are 93-99% fragmented
+-- and about twice their needed size (see docs/performance.md). A rebuild makes them compact again, so the
+-- measurements and the API read fewer pages.
+DECLARE @RebuildStart datetime2 = SYSUTCDATETIME();
+ALTER INDEX ALL ON dbo.Requests REBUILD;
+PRINT CONCAT(N'Rebuilt indexes in ', DATEDIFF(MILLISECOND, @RebuildStart, SYSUTCDATETIME()), N' ms.');

@@ -29,8 +29,9 @@ public class RequestConfiguration : IEntityTypeConfiguration<Request>
         // Filter by status, newest/oldest first (e.g. "all New requests, sorted by creation date").
         builder.HasIndex(r => new { r.Status, r.CreatedAt });
 
-        // Filter by priority (e.g. "all High priority requests").
-        builder.HasIndex(r => r.Priority);
+        // Filter by priority, newest/oldest first (e.g. "all High priority requests, sorted by creation date").
+        // Composite like the status index, so both the COUNT and the page query can seek (see docs/performance.md).
+        builder.HasIndex(r => new { r.Priority, r.CreatedAt });
 
         // Search/filter by organization name (equality and prefix search).
         builder.HasIndex(r => r.OrganizationName);

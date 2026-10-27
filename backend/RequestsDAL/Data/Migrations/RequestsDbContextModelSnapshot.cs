@@ -70,7 +70,7 @@ namespace RequestsDAL.Data.Migrations
 
                     b.HasIndex("OrganizationName");
 
-                    b.HasIndex("Priority");
+                    b.HasIndex("Priority", "CreatedAt");
 
                     b.HasIndex("Status", "CreatedAt");
 
