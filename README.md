@@ -57,12 +57,13 @@
 | `switchMap` שמבטל בקשה קודמת | `requests-page.ts` (`loads$`) | `requests-page.spec.ts`: חיפוש חדש מבטל את ה-`GET` הממתין, ורק התוצאה החדשה מוצגת |
 | Loading / Empty / Error עם Retry | `requests-page.html` (`list.loading`, `totalCount === 0`, `list.error` עם `retry()`) | קוד |
 | טיפול ב-`409` | `requests-page.ts` (`onStatusChange`): הודעה, ו-`GET /api/requests/{id}` לשורה בלבד | `requests-page.spec.ts`: `409` ← `GET /api/requests/{id}` ← רק השורה הזו מוחלפת, והודעת ה-Conflict מוצגת; נבדק גם ב-Chrome מול ה-API ([`ai-usage.md`](docs/ai-usage.md)) |
+| עדכון סטטוס מוצלח ב-UI | `requests-page.ts` (`onStatusChange`): השורה מוחלפת מיד, ואז הדף הנוכחי נטען מחדש מהשרת עם אותה שאילתה (פילטרים, מיון, דף), כך שהרשימה וה-`totalCount` תמיד תואמים לשאילתה | `requests-page.spec.ts`: אחרי `PATCH` מוצלח נשלח `GET` לרשימה עם אותם Query Parameters, וה-Stats נטענים מחדש |
 | Aggregations ב-UI | `requests-stats` (נטען מחדש אחרי עדכון מוצלח) | נבדק ב-Chrome |
 | היסטוריה ב-UI | `request-history-dialog` (Loading / Empty / Error) | נבדק ב-Chrome (הדיאלוג מציג את השינויים); מצבי Empty ו-Error בקוד |
 | הפרדה בין Components ל-Services | רק `core/services/requests-api.service.ts` משתמש ב-`HttpClient`; רכיבי התצוגה עובדים עם `input()`/`output()` בלבד | חיפוש בקוד (ראו דגשים) |
 | **6. ביצועים:** Execution Plans, אינדקסים, צוואר בקבוק ושיפור | `RequestsDAL/Data/Configurations`, 2 Migrations, Rebuild ב-`02_seed.sql` | [`performance.md`](docs/performance.md) ו-17 קובצי `.sqlplan`; השוואה לפני ואחרי אינדקס |
 | **7. Cache:** Expiration, Invalidation, Scale-out | `RequestsService` (`StatsCacheDuration` של 60 שניות, `_cache.Remove` אחרי כל עדכון מוצלח, ומונה Generation שמונע שמירת מספרים ישנים) | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately`; [`cache.md`](docs/cache.md) |
-| **8. בדיקות** | `backend/RequestsApi.Tests`: 31 בדיקות (13 Integration מול LocalDB, 18 Unit); Angular: 6 בדיקות (Vitest) ב-3 קבצים | [`tests.md`](docs/tests.md) |
+| **8. בדיקות** | `backend/RequestsApi.Tests`: 31 בדיקות (13 Integration מול LocalDB, 18 Unit); Angular: 7 בדיקות (Vitest) ב-3 קבצים | [`tests.md`](docs/tests.md) |
 | **9. תכנון עבודה** | – | [`work-plan.md`](docs/work-plan.md) |
 | **10. איכות קוד** | 3 שכבות שנאכפות בקומפילציה, `ProblemDetails` אחיד (`GlobalExceptionHandler`) | `dotnet build`: 0 אזהרות |
 | **11. תיעוד** | README זה, [`docs/`](docs/) | [`ai-usage.md`](docs/ai-usage.md), [`known-limitations.md`](docs/known-limitations.md) |
@@ -72,7 +73,7 @@
 נבדק ב-27.10.2026:
 
 - `dotnet test`: **31 בדיקות, כולן עברו** (`Failed: 0`).
-- `npm test -- --watch=false` (Angular): **6 בדיקות ב-3 קבצים, כולן עברו**.
+- `npm test -- --watch=false` (Angular): **7 בדיקות ב-3 קבצים, כולן עברו**.
 - `ng build --configuration production`: הסתיים **בלי אזהרות ובלי שגיאות**.
 - `02_seed.sql`: בדיוק **100,000** שורות ב-`Requests`.
 - הוראות ההרצה ב-[סעיף 3](#3-הוראות-הרצה) נבדקו מ-`git clone` נקי ועבדו מקצה לקצה: יצירת ה-DB, ה-Seed, `npm install`, ה-API (Swagger מחזיר `200`) והאפליקציה (הרשימה וה-Stats מוצגים ב-Chrome).
@@ -221,7 +222,7 @@ dotnet test
 
 אם ה-API רץ באותו זמן מאותה תיקייה, ייתכן שה-Build ייכשל בגלל קבצי DLL נעולים. במקרה כזה יש לעצור את ה-API לפני `dotnet test`.
 
-**Frontend** (Vitest, 6 בדיקות):
+**Frontend** (Vitest, 7 בדיקות):
 
 ```powershell
 cd frontend\requests-app
@@ -457,7 +458,7 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 
 ## 10. בדיקות אוטומטיות
 
-31 בדיקות ב-`backend/RequestsApi.Tests`: 13 Integration Tests עם `WebApplicationFactory<Program>` מול SQL Server LocalDB, ו-18 Unit Tests לכללי המעבר. בנוסף, 6 בדיקות Angular (Vitest) ב-3 קבצי `*.spec.ts`.
+31 בדיקות ב-`backend/RequestsApi.Tests`: 13 Integration Tests עם `WebApplicationFactory<Program>` מול SQL Server LocalDB, ו-18 Unit Tests לכללי המעבר. בנוסף, 7 בדיקות Angular (Vitest) ב-3 קבצי `*.spec.ts`.
 
 | נבדק | סוג |
 |---|---|
@@ -474,6 +475,7 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 | `getRequests` שולח את השאילתה כ-Query Parameters ומשמיט ערכים ריקים (`HttpTestingController`) | Angular |
 | כמה הקלדות מהירות בחיפוש שולחות `GET` אחד, רק אחרי זמן ה-Debounce (Fake Timers) | Angular |
 | חיפוש חדש מבטל את ה-`GET` הממתין (`switchMap`), ורק התוצאה החדשה מוצגת | Angular |
+| `PATCH` מוצלח: השורה מוחלפת מיד, ואז נשלח `GET` לרשימה עם אותה שאילתה, וה-Stats נטענים מחדש | Angular |
 | `409` ב-`PATCH`: נשלח `GET /api/requests/{id}`, רק השורה הזו מוחלפת, והודעת ה-Conflict מוצגת | Angular |
 | `app.spec.ts`: האפליקציה נוצרת, ושם המערכת מוצג בסרגל העליון | Angular |
 

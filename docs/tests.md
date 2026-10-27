@@ -60,6 +60,7 @@ for these tests.
 | `getRequests sends the query as URL parameters and leaves out empty values` | `core/services/requests-api.service.spec.ts` | Every non-empty query field is sent as a URL parameter with the right value; `null` and `''` values (including an empty search) are not sent at all. |
 | `sends only one GET for several quick keystrokes, after the debounce time` | `features/requests/requests-page/requests-page.spec.ts` | Three keystrokes typed into the real search input within 200 ms: no GET at 299 ms after the last one, exactly one GET at 300 ms, with the last text and page 1. |
 | `cancels a pending GET when the search changes and shows only the newest result` | same | While the GET for the first search is pending, a new search starts a new GET and the first one is cancelled (`switchMap`). The table shows only the newest result. |
+| `replaces the row at once, then reloads the current page with the same query and reloads the stats` | same | After a successful PATCH, the row shows the returned version at once. Then a new list GET is sent with exactly the same query parameters as before, and the stats are reloaded. When it returns, the table shows the server's page. Without the reload, this test fails. |
 | `loads only the changed row, replaces it in the table and shows the conflict message` | same | The PATCH (with the row's rowVersion and the user name) returns 409. The page sends `GET /api/requests/{id}`, replaces only that row with the returned version (the other row is the same object), does not reload the list or the stats, and shows the conflict message. |
 | `should create the app`, `should render the app name in the toolbar` | `app.spec.ts` | The existing tests: the root component is created and the toolbar shows the app name. |
 
@@ -67,7 +68,7 @@ for these tests.
 after the 409) fails the test. The search tests were also run against deliberately broken code (`mergeMap` instead
 of `switchMap`, and no debounce): both failed, then the code was restored.
 
-In total: 6 Angular tests in 3 files, all passing.
+In total: 7 Angular tests in 3 files, all passing.
 
 ## Why a real database instead of the EF Core InMemory provider
 

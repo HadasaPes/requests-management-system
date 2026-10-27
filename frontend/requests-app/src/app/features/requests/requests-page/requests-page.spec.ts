@@ -138,6 +138,43 @@ describe('RequestsPage', () => {
     });
   });
 
+  describe('successful status update', () => {
+    it('replaces the row at once, then reloads the current page with the same query and reloads the stats', () => {
+      vi.spyOn(TestBed.inject(MatSnackBar), 'open').mockReturnValue(undefined as never);
+      TestBed.inject(CurrentUserService).setName('Dana');
+
+      fixture = TestBed.createComponent(RequestsPage);
+      fixture.detectChanges();
+      httpTesting.expectOne(`${BASE_URL}/stats`).flush(EMPTY_STATS);
+      const initial = expectListRequest();
+      const initialParams = initial.request.params;
+      const row1 = makeRequest(1);
+      initial.flush(pageOf([row1, makeRequest(2)]));
+      fixture.detectChanges();
+
+      table().statusChange.emit({ request: row1, status: 'InProgress' });
+
+      const updated = makeRequest(1, { status: 'InProgress', rowVersion: 'rv-1-new' });
+      httpTesting.expectOne(`${BASE_URL}/1/status`).flush(updated);
+      fixture.detectChanges();
+
+      // Shown at once, before the reload returns.
+      expect(table().items()[0]).toEqual(updated);
+
+      const reload = expectListRequest();
+      expect(reload.request.params.keys().sort()).toEqual(initialParams.keys().sort());
+      for (const key of initialParams.keys()) {
+        expect(reload.request.params.get(key)).toBe(initialParams.get(key));
+      }
+      httpTesting.expectOne(`${BASE_URL}/stats`).flush(EMPTY_STATS);
+
+      // The list now shows the server's page (for example, row 1 left it because it no longer matches a filter).
+      reload.flush({ ...pageOf([makeRequest(2)]), totalCount: 1 });
+      fixture.detectChanges();
+      expect(table().items().map((r) => r.id)).toEqual([2]);
+    });
+  });
+
   describe('409 handling', () => {
     it('loads only the changed row, replaces it in the table and shows the conflict message', () => {
       const snackBarOpen = vi.spyOn(TestBed.inject(MatSnackBar), 'open').mockReturnValue(undefined as never);

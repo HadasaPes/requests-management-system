@@ -208,6 +208,9 @@ export class RequestsPage {
             this.snackBar.open(CONFLICT_MESSAGE, 'OK', { duration: 8000 });
           } else {
             this.snackBar.open(`Request #${updated.id} is now ${updated.status}.`, undefined, { duration: 3000 });
+            // The row is shown at once above; reloading the current page then drops it if it no longer
+            // matches the filters, and fixes the sort order and totalCount.
+            this.reload$.next();
             this.statsReload$.next();
           }
         },
