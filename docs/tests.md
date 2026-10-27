@@ -44,6 +44,31 @@ A full run takes about 10 seconds (most of it is starting the test host and recr
 
 In total: 31 test cases (13 integration, 18 unit), all passing.
 
+## Angular tests
+
+```
+cd frontend/requests-app
+npm test -- --watch=false
+```
+
+Vitest, through the Angular CLI test runner (`ng test`). No server is needed: HTTP calls are answered by
+`HttpTestingController`, and the debounce time is controlled with Vitest fake timers. No production code was changed
+for these tests.
+
+| Test | File | What it proves |
+|------|------|----------------|
+| `getRequests sends the query as URL parameters and leaves out empty values` | `core/services/requests-api.service.spec.ts` | Every non-empty query field is sent as a URL parameter with the right value; `null` and `''` values (including an empty search) are not sent at all. |
+| `sends only one GET for several quick keystrokes, after the debounce time` | `features/requests/requests-page/requests-page.spec.ts` | Three keystrokes typed into the real search input within 200 ms: no GET at 299 ms after the last one, exactly one GET at 300 ms, with the last text and page 1. |
+| `cancels a pending GET when the search changes and shows only the newest result` | same | While the GET for the first search is pending, a new search starts a new GET and the first one is cancelled (`switchMap`). The table shows only the newest result. |
+| `loads only the changed row, replaces it in the table and shows the conflict message` | same | The PATCH (with the row's rowVersion and the user name) returns 409. The page sends `GET /api/requests/{id}`, replaces only that row with the returned version (the other row is the same object), does not reload the list or the stats, and shows the conflict message. |
+| `should create the app`, `should render the app name in the toolbar` | `app.spec.ts` | The existing tests: the root component is created and the toolbar shows the app name. |
+
+`HttpTestingController.verify()` runs after each test, so any unexpected extra request (for example a list reload
+after the 409) fails the test. The search tests were also run against deliberately broken code (`mergeMap` instead
+of `switchMap`, and no debounce): both failed, then the code was restored.
+
+In total: 6 Angular tests in 3 files, all passing.
+
 ## Why a real database instead of the EF Core InMemory provider
 
 - **Concurrency:** InMemory does not support SQL Server `rowversion`. The value is never generated, and the
