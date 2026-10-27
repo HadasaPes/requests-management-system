@@ -6,6 +6,8 @@
 
 ## תוכן עניינים
 
+מיפוי מהיר של כל דרישה לקוד ולהוכחה: [מיפוי דרישות המבחן](#מיפוי-דרישות-המבחן)
+
 1. [סקירה כללית](#1-סקירה-כללית)
 2. [טכנולוגיות וגרסאות](#2-טכנולוגיות-וגרסאות)
 3. [הוראות הרצה](#3-הוראות-הרצה)
@@ -29,6 +31,60 @@
 המשתמש יכול לחפש, לסנן, למיין ולדפדף ב-100,000 פניות. כל הפעולות האלה מתבצעות בשרת, בתוך SQL Server.
 אפשר לשנות סטטוס של פנייה בודדת או של עד 100 פניות בבת אחת. המערכת מונעת דריסה של שינויים מקבילים (`409 Conflict`), ושומרת היסטוריה של כל שינוי סטטוס.
 בראש המסך מוצג פאנל סיכום (כמות פניות לפי סטטוס ולפי עדיפות), והוא נשמר ב-Cache קצר.
+
+---
+
+## מיפוי דרישות המבחן
+
+נתיבי הקבצים יחסיים ל-`backend/` (שרת) ול-`frontend/requests-app/src/app/` (Angular). הבדיקות נמצאות ב-`backend/RequestsApi.Tests/`.
+
+| דרישה | איפה ממומש | הוכחה |
+|---|---|---|
+| **1. שליפה:** דפדוף, פילטרים, חיפוש ומיון בשרת | `RequestsRepository.GetPagedAsync`, `ApplyFilters`, `ApplySorting` (ב-SQL, `Skip`/`Take`) | `GetRequests_CombinedFiltersAndPaging_ReturnsExactPageAndTotalCount`; ה-SQL שנוצר ב-[סעיף 6](#6-בסיס-נתונים-ואינדקסים) |
+| הגבלת Page Size ל-100 ו-Validation | `RequestQueryValidator` (`MaxPageSize = 100`) | `GetRequests_InvalidQueryParameter_Returns400WithFieldError` (`pageSize=500`, `status=Done`) |
+| Aggregations | `RequestsRepository.GetCountsAsync` (`GROUP BY`), `RequestsService.GetStatsAsync` | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately`; מדידה 2 ב-[`performance.md`](docs/performance.md) |
+| `CancellationToken` | כל 8 המתודות ב-`IRequestsRepository` ו-6 ב-`IRequestsService`, מה-Controller ועד EF Core | קוד |
+| DTOs בלבד | `RequestsBL/Dtos`, `RequestsBL/Mapping/RequestMappings.cs` | ה-API לא יכול להשתמש ב-Entities: `DisableTransitiveProjectReferences` ([סעיף 4](#4-מבנה-הפתרון)) |
+| **2. עדכון סטטוס:** `404` | `RequestsService.UpdateStatusAsync` | `UpdateStatus_UnknownId_Returns404` |
+| מעבר לא חוקי נדחה בשרת | `Rules/StatusTransitions.cs` (`GetError`), `RequestsService.ApplyStatusChangeAsync` | `GetError_Transition_ReturnsNullOnlyWhenAllowed` (14 מקרים); `InvalidTransition` בבדיקת ה-Bulk |
+| Optimistic Concurrency שנאכף בבסיס הנתונים | `RequestsRepository.UpdateStatusAsync` (`RowVersion` כ-`OriginalValue` → `WHERE [RowVersion] = @p`) | `UpdateStatus_TwoConcurrentUpdatesWithSameRowVersion_OneSucceedsAndOneConflicts`; [סעיף 7](#7-concurrency) |
+| עדכון `UpdatedAt` ו-`RowVersion` | `RequestsRepository.UpdateStatusAsync` | נבדק ב-`PATCH` אמיתי (ראו תוצאות אימות) |
+| **3. היסטוריה:** שורה באותה טרנזקציה, בלי שורה כשהעדכון נכשל (גם ב-Bulk) | שורת ההיסטוריה והעדכון באותו `SaveChanges` | שתי הבדיקות של Concurrency ו-Bulk בודקות את מספר שורות ההיסטוריה (1 למצליח, 0 לנכשל) |
+| Endpoint להיסטוריה | `GET /api/requests/{id}/history`, `RequestsRepository.GetHistoryAsync` | [סעיף 5](#5-api) |
+| **4. Bulk:** עד 100, Partial Success | `RequestsService.BulkUpdateStatusAsync`, `StatusUpdateValidator` (`MaxBulkItems = 100`) | `BulkUpdateStatus_MixedItems_ReturnsOutcomePerItemAndChangesOnlyValidItems`; [סעיף 8](#8-bulk-update) |
+| **5. Angular:** `debounceTime` על החיפוש בלבד | `requests-page.ts` (`search$`) | קוד; [סעיף 4](#4-מבנה-הפתרון) |
+| `switchMap` שמבטל בקשה קודמת | `requests-page.ts` (`loads$`) | קוד |
+| Loading / Empty / Error עם Retry | `requests-page.html` (`list.loading`, `totalCount === 0`, `list.error` עם `retry()`) | קוד |
+| טיפול ב-`409` | `requests-page.ts` (`onStatusChange`): הודעה, ו-`GET /api/requests/{id}` לשורה בלבד | נבדק ב-Chrome מול ה-API: שינוי מקביל ← הודעה ← השורה נטענה מחדש ([`ai-usage.md`](docs/ai-usage.md)) |
+| Aggregations ב-UI | `requests-stats` (נטען מחדש אחרי עדכון מוצלח) | נבדק ב-Chrome |
+| היסטוריה ב-UI | `request-history-dialog` (Loading / Empty / Error) | נבדק ב-Chrome (הדיאלוג מציג את השינויים); מצבי Empty ו-Error בקוד |
+| הפרדה בין Components ל-Services | רק `core/services/requests-api.service.ts` משתמש ב-`HttpClient`; רכיבי התצוגה עובדים עם `input()`/`output()` בלבד | חיפוש בקוד (ראו דגשים) |
+| **6. ביצועים:** Execution Plans, אינדקסים, צוואר בקבוק ושיפור | `RequestsDAL/Data/Configurations`, 2 Migrations, Rebuild ב-`02_seed.sql` | [`performance.md`](docs/performance.md) ו-17 קובצי `.sqlplan`; השוואה לפני ואחרי אינדקס |
+| **7. Cache:** Expiration, Invalidation, Scale-out | `RequestsService` (`StatsCacheDuration` של 60 שניות, `_cache.Remove` אחרי כל עדכון מוצלח) | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately`; [`cache.md`](docs/cache.md) |
+| **8. בדיקות** | `backend/RequestsApi.Tests` (Integration מול LocalDB, Unit) | [`tests.md`](docs/tests.md) |
+| **9. תכנון עבודה** | – | [`work-plan.md`](docs/work-plan.md) |
+| **10. איכות קוד** | 3 שכבות שנאכפות בקומפילציה, `ProblemDetails` אחיד (`GlobalExceptionHandler`) | `dotnet build`: 0 אזהרות |
+| **11. תיעוד** | README זה, [`docs/`](docs/) | [`ai-usage.md`](docs/ai-usage.md), [`known-limitations.md`](docs/known-limitations.md) |
+
+### תוצאות אימות
+
+נבדק ב-27.10.2026 על `git clone` נקי של commit `ff39d85`, לפי [סעיף 3](#3-הוראות-הרצה) (דרך א' ליצירת ה-DB):
+
+- `dotnet test`: **25 בדיקות, כולן עברו** (`Failed: 0`).
+- `ng build --configuration production`: הסתיים **בלי אזהרות ובלי שגיאות**.
+- `02_seed.sql`: בדיוק **100,000** שורות ב-`Requests` (כ-6 שניות, ועוד כשנייה ל-Rebuild).
+- הוראות ההרצה עבדו מקצה לקצה: `01_schema.sql`, `02_seed.sql`, `npm install`, ה-API (Swagger מחזיר `200`) והאפליקציה (`200`, הרשימה וה-Stats מוצגים ב-Chrome).
+- `PATCH` אמיתי: `200`, ו-`RowVersion` ו-`UpdatedAt` חדשים. שליחה חוזרת עם ה-`RowVersion` הישן: `409`. מזהה שלא קיים: `404`. בהיסטוריה נכתבה שורה אחת.
+
+### דגשים להערכה
+
+- **אין סינון, מיון או דפדוף בצד הלקוח:** כל השאילתה נשלחת כ-Query Parameters (`requests-api.service.ts`). חיפוש בכל קוד ה-Angular לא מוצא `.filter(`, `.sort(` או `.slice(` על רשימת הפניות. ([סעיף 4](#4-מבנה-הפתרון))
+- **ה-Concurrency נאכף בבסיס הנתונים, לא רק ב-UI:** `UPDATE ... WHERE [RowVersion] = @p`. בקשות מקבילות אמיתיות: בכל ההרצות התקבלו `200` אחד ו-`409` אחד. ([סעיף 7](#7-concurrency))
+- **ל-Cache יש אסטרטגיית Invalidation:** מחיקה אחרי כל עדכון מוצלח, ו-Expiration של 60 שניות כגיבוי. ([סעיף 9](#9-cache-ו-invalidation), [`cache.md`](docs/cache.md))
+- **תוכנית העבודה משקפת דרישות, תלויות ומאמץ:** 35 משימות ב-9 Epics, עם תלויות, הערכת זמן (כ-16 שעות) וטבלה שמקשרת כל סעיף במבחן למשימות. ([`work-plan.md`](docs/work-plan.md))
+- **בלי Over-engineering:**
+  - **Redis לא מומש בכוונה:** יש שרת API אחד, ולכן `IMemoryCache` מספיק. מה צריך לשנות כשיש כמה שרתים מתועד ב-[`cache.md`](docs/cache.md).
+  - **Full-Text Search לא מומש בכוונה:** הוא לא מותקן ב-LocalDB שעליו המערכת רצה (`FULLTEXTSERVICEPROPERTY('IsFullTextInstalled') = 0`). בנוסף, הוא מחפש מילים ולא כל תת-מחרוזת. העלות של `LIKE` נמדדה ומתועדת כשיפור אפשרי. ([סעיף 12](#12-מגבלה-ידועה-ושיפור-אפשרי))
 
 ---
 
