@@ -48,7 +48,7 @@
 | **2. עדכון סטטוס:** `404` | `RequestsService.UpdateStatusAsync` | `UpdateStatus_UnknownId_Returns404` |
 | מעבר לא חוקי נדחה בשרת | `Rules/StatusTransitions.cs` (`GetError`), `RequestsService.ApplyStatusChangeAsync` | `UpdateStatus_InvalidTransition_Returns400AndChangesNothing`; `GetError_Transition_ReturnsNullOnlyWhenAllowed` (14 מקרים); `InvalidTransition` בבדיקת ה-Bulk |
 | Optimistic Concurrency שנאכף בבסיס הנתונים | `RequestsRepository.UpdateStatusAsync` (`RowVersion` כ-`OriginalValue` → `WHERE [RowVersion] = @p`) | `UpdateStatus_TwoConcurrentUpdatesWithSameRowVersion_OneSucceedsAndOneConflicts`; [סעיף 7](#7-concurrency) |
-| עדכון `UpdatedAt` ו-`RowVersion` | `RequestsRepository.UpdateStatusAsync` | נבדק ב-`PATCH` אמיתי (ראו תוצאות אימות) |
+| עדכון `UpdatedAt` ו-`RowVersion` | `RequestsRepository.UpdateStatusAsync` | נבדק ב-`PATCH` אמיתי: `200` עם `RowVersion` ו-`UpdatedAt` חדשים, ושליחה חוזרת עם ה-`RowVersion` הישן מחזירה `409` |
 | **3. היסטוריה:** שורה באותה טרנזקציה, בלי שורה כשהעדכון נכשל (גם ב-Bulk) | שורת ההיסטוריה והעדכון באותו `SaveChanges` | בדיקות ה-Concurrency, ה-Bulk המעורב, המעבר הלא חוקי וה-Bulk הלא תקין בודקות את מספר שורות ההיסטוריה (1 למצליח, 0 לנכשל) |
 | Endpoint להיסטוריה | `GET /api/requests/{id}/history`, `RequestsRepository.GetHistoryAsync` | `GetHistory_AfterSuccessfulUpdate_ReturnsEntryWithAllFields`, `GetHistory_UnknownId_Returns404` |
 | **4. Bulk:** עד 100, Partial Success | `RequestsService.BulkUpdateStatusAsync`, `StatusUpdateValidator` (`MaxBulkItems = 100`) | `BulkUpdateStatus_MixedItems_ReturnsOutcomePerItemAndChangesOnlyValidItems`; `BulkUpdateStatus_InvalidRequest_Returns400AndChangesNothing` (101 פריטים, מזהים כפולים, רשימה ריקה); [סעיף 8](#8-bulk-update) |
@@ -68,13 +68,12 @@
 
 ### תוצאות אימות
 
-נבדק ב-27.10.2026 על `git clone` נקי של commit `ff39d85`, לפי [סעיף 3](#3-הוראות-הרצה) (דרך א' ליצירת ה-DB):
+נבדק ב-27.10.2026:
 
-- `dotnet test`: **25 בדיקות, כולן עברו** (`Failed: 0`). אחרי שנוספו 5 בדיקות (מעבר לא חוקי, היסטוריה ו-Validation של Bulk), הורץ שוב: **30 בדיקות, כולן עברו**. אחרי שנוספה בדיקה לרשימה ריקה ב-Bulk: **31 בדיקות, כולן עברו**.
+- `dotnet test`: **31 בדיקות, כולן עברו** (`Failed: 0`).
 - `ng build --configuration production`: הסתיים **בלי אזהרות ובלי שגיאות**.
-- `02_seed.sql`: בדיוק **100,000** שורות ב-`Requests` (כ-6 שניות, ועוד כשנייה ל-Rebuild).
-- הוראות ההרצה עבדו מקצה לקצה: `01_schema.sql`, `02_seed.sql`, `npm install`, ה-API (Swagger מחזיר `200`) והאפליקציה (`200`, הרשימה וה-Stats מוצגים ב-Chrome).
-- `PATCH` אמיתי: `200`, ו-`RowVersion` ו-`UpdatedAt` חדשים. שליחה חוזרת עם ה-`RowVersion` הישן: `409`. מזהה שלא קיים: `404`. בהיסטוריה נכתבה שורה אחת.
+- `02_seed.sql`: בדיוק **100,000** שורות ב-`Requests`.
+- הוראות ההרצה ב-[סעיף 3](#3-הוראות-הרצה) נבדקו מ-`git clone` נקי ועבדו מקצה לקצה: יצירת ה-DB, ה-Seed, `npm install`, ה-API (Swagger מחזיר `200`) והאפליקציה (הרשימה וה-Stats מוצגים ב-Chrome).
 
 ### דגשים להערכה
 
