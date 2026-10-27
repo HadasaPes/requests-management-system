@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using RequestsApi.Tests.Infrastructure;
 using RequestsBL.Dtos;
+using RequestsDAL.Entities;
 
 namespace RequestsApi.Tests.Integration;
 
@@ -27,6 +28,27 @@ public class UpdateStatusTests : IntegrationTestBase
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.Conflict], statusCodes);
         Assert.Equal(1, await CountHistoryRowsAsync(request.Id));
         Assert.Equal("InProgress", (await GetRequestAsync(request.Id)).Status);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_InvalidTransition_Returns400AndChangesNothing()
+    {
+        // Arrange: Completed is final; the rowVersion is current, so only the transition rule can reject it.
+        var request = await GetRequestAsync(TestData.Ids.Completed);
+        var before = (await GetStoredRequestsAsync()).Single(r => r.Id == request.Id);
+
+        // Act
+        var response = await PatchStatusAsync(request.Id, "New", request.RowVersion);
+
+        // Assert: the response
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(["status"], await ReadErrorFieldsAsync(response));
+
+        // Assert: the database - same status, RowVersion and UpdatedAt, and no history row.
+        var after = (await GetStoredRequestsAsync()).Single(r => r.Id == request.Id);
+        Assert.Equal(before, after);
+        Assert.Equal(RequestStatus.Completed, after.Status);
+        Assert.Equal(0, await CountHistoryRowsAsync(request.Id));
     }
 
     [Fact]

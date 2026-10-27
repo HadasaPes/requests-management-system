@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using RequestsApi.Tests.Infrastructure;
 using RequestsBL.Dtos;
 
@@ -47,10 +46,6 @@ public class GetRequestsTests : IntegrationTestBase
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var errors = body.RootElement.GetProperty("errors");
-        Assert.Equal([expectedField], errors.EnumerateObject().Select(e => e.Name));
+        Assert.Equal([expectedField], await ReadErrorFieldsAsync(response));
     }
 }

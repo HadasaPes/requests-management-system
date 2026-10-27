@@ -23,7 +23,7 @@ is never used.
 - All integration tests share one fixture and run one after another, because they share one database.
   The unit tests can run in parallel with them.
 
-A full run takes about 5 seconds.
+A full run takes about 10 seconds (most of it is starting the test host and recreating the database).
 
 ## What each test covers
 
@@ -33,9 +33,16 @@ A full run takes about 5 seconds.
 | `GetRequests_InvalidQueryParameter_Returns400WithFieldError` (pageSize=500, status=Done) | Integration | Invalid query parameters return 400 ProblemDetails with an error for exactly that field. |
 | `UpdateStatus_TwoConcurrentUpdatesWithSameRowVersion_OneSucceedsAndOneConflicts` | Integration | Two PATCHes sent at the same time with the same rowVersion: exactly one 200 and one 409, and exactly one history row. |
 | `UpdateStatus_UnknownId_Returns404` | Integration | PATCH for an id that does not exist returns 404 ProblemDetails. |
+| `UpdateStatus_InvalidTransition_Returns400AndChangesNothing` | Integration | Completed → New with the current rowVersion returns 400 with a `status` error. In the database the status, RowVersion and UpdatedAt are unchanged, and no history row was added. |
+| `GetHistory_AfterSuccessfulUpdate_ReturnsEntryWithAllFields` | Integration | After a successful PATCH, the history has exactly one entry with the right previousStatus, newStatus and changedBy, and a UTC changedAt within the time of the update. |
+| `GetHistory_UnknownId_Returns404` | Integration | History of an id that does not exist returns 404 ProblemDetails. |
 | `BulkUpdateStatus_MixedItems_ReturnsOutcomePerItemAndChangesOnlyValidItems` | Integration | A bulk with valid, not found, stale rowVersion and invalid transition items returns the right outcome per item, in order. In the database, only the valid items changed, each with exactly one history row. |
+| `BulkUpdateStatus_InvalidRequest_Returns400AndChangesNothing` (101 items, duplicate ids) | Integration | An invalid bulk request returns 400 with an `items` error and is not processed at all: the items carry real, current rowVersions, yet no request changed (status, RowVersion, UpdatedAt) and no history row was added. |
 | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately` | Integration | The stats are cached, and a successful PATCH clears the cache: the next call already shows the new counts. |
 | `GetError_Transition_ReturnsNullOnlyWhenAllowed` (14 cases) | Unit | The status workflow: the 4 allowed transitions, and forbidden ones (skipping steps, going back, leaving Completed, same status). |
+| `GetAllowedNext_Status_ReturnsExactlyTheAllowedTransitions` (4 cases) | Unit | `allowedNextStatuses` comes from the same rules: exactly the allowed next statuses for each status, empty for Completed. |
+
+In total: 30 test cases (12 integration, 18 unit), all passing.
 
 ## Why a real database instead of the EF Core InMemory provider
 

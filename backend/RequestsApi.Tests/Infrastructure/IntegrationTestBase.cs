@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RequestsBL.Dtos;
+using RequestsDAL.Entities;
 
 namespace RequestsApi.Tests.Infrastructure;
 
@@ -37,4 +39,28 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         await using var dbContext = Fixture.CreateDbContext();
         return await dbContext.RequestStatusHistory.CountAsync(h => h.RequestId == requestId);
     }
+
+    /// <summary>Every request as stored in the database, to assert that a rejected call changed nothing.</summary>
+    protected async Task<IReadOnlyList<StoredRequest>> GetStoredRequestsAsync()
+    {
+        await using var dbContext = Fixture.CreateDbContext();
+        var rows = await dbContext.Requests.AsNoTracking().OrderBy(r => r.Id).ToListAsync();
+        return rows.Select(r => new StoredRequest(r.Id, r.Status, Convert.ToBase64String(r.RowVersion), r.UpdatedAt)).ToList();
+    }
+
+    protected async Task<int> CountAllHistoryRowsAsync()
+    {
+        await using var dbContext = Fixture.CreateDbContext();
+        return await dbContext.RequestStatusHistory.CountAsync();
+    }
+
+    /// <summary>The field names in the "errors" object of a 400 ValidationProblemDetails response.</summary>
+    protected static async Task<IReadOnlyList<string>> ReadErrorFieldsAsync(HttpResponseMessage response)
+    {
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return body.RootElement.GetProperty("errors").EnumerateObject().Select(e => e.Name).ToList();
+    }
+
+    protected sealed record StoredRequest(int Id, RequestStatus Status, string RowVersion, DateTime UpdatedAt);
 }
