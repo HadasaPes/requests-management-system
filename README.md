@@ -57,7 +57,7 @@
 | **5. Angular:** השאילתה נשלחת לשרת כ-Query Parameters, בלי ערכים ריקים | `requests-api.service.ts` (`toHttpParams`) | `requests-api.service.spec.ts` (`HttpTestingController`) |
 | `debounceTime` על החיפוש בלבד | `requests-page.ts` (`search$`) | `requests-page.spec.ts`: כמה הקלדות מהירות שולחות `GET` אחד, רק אחרי 300ms (Fake Timers); [סעיף 4](#4-מבנה-הפתרון) |
 | `switchMap` שמבטל בקשה קודמת | `requests-page.ts` (`loads$`) | `requests-page.spec.ts`: חיפוש חדש מבטל את ה-`GET` הממתין, ורק התוצאה החדשה מוצגת |
-| Loading / Empty / Error עם Retry | `requests-page.html` (`list.loading`, `totalCount === 0`, `list.error` עם `retry()`) | קוד |
+| Loading / Empty / Error עם Retry | `requests-page.html` (`list.loading`, `totalCount === 0`, `list.error` עם `retry()`) | `requests-page.spec.ts` (`list states`): `shows the empty message when the API returns no items`, `shows the error message and a Retry button when the API returns 500`, `sends the GET again on Retry and shows the rows when it succeeds`. מצב ה-Loading בקוד בלבד |
 | טיפול ב-`409` | `requests-page.ts` (`onStatusChange`): הודעה, ו-`GET /api/requests/{id}` לשורה בלבד | `requests-page.spec.ts`: `409` ← `GET /api/requests/{id}` ← רק השורה הזו מוחלפת, והודעת ה-Conflict מוצגת; נבדק גם ב-Chrome מול ה-API ([`ai-usage.md`](docs/ai-usage.md)) |
 | עדכון סטטוס מוצלח ב-UI | `requests-page.ts` (`onStatusChange`): השורה מוחלפת מיד, ואז הדף הנוכחי נטען מחדש מהשרת עם אותה שאילתה (פילטרים, מיון, דף), כך שהרשימה וה-`totalCount` תמיד תואמים לשאילתה | `requests-page.spec.ts`: אחרי `PATCH` מוצלח נשלח `GET` לרשימה עם אותם Query Parameters, וה-Stats נטענים מחדש |
 | Aggregations ב-UI | `requests-stats` (נטען מחדש אחרי עדכון מוצלח) | נבדק ב-Chrome |
@@ -65,7 +65,7 @@
 | הפרדה בין Components ל-Services | רק `core/services/requests-api.service.ts` משתמש ב-`HttpClient`; רכיבי התצוגה עובדים עם `input()`/`output()` בלבד | חיפוש בקוד (ראו דגשים) |
 | **6. ביצועים:** Execution Plans, אינדקסים, צוואר בקבוק ושיפור | `RequestsDAL/Data/Configurations`, 2 Migrations, Rebuild ב-`02_seed.sql` | [`performance.md`](docs/performance.md) ו-17 קובצי `.sqlplan`; השוואה לפני ואחרי אינדקס |
 | **7. Cache:** Expiration, Invalidation, Scale-out | `RequestsService` (`StatsCacheDuration` של 60 שניות, `_cache.Remove` אחרי כל עדכון מוצלח, ומונה Generation שמונע שמירת מספרים ישנים) | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately`; [`cache.md`](docs/cache.md) |
-| **8. בדיקות** | `backend/RequestsApi.Tests`: 31 בדיקות (13 Integration מול LocalDB, 18 Unit); Angular: 10 בדיקות (Vitest) ב-3 קבצים | [`tests.md`](docs/tests.md) |
+| **8. בדיקות** | `backend/RequestsApi.Tests`: 31 בדיקות (13 Integration מול LocalDB, 18 Unit); Angular: 10 בדיקות (Vitest) ב-3 קבצים | [`tests.md`](docs/tests.md); כל הבדיקות וה-Build רצים ב-CI בכל push ([`ci.yml`](.github/workflows/ci.yml)) |
 | **9. תכנון עבודה** | – | [`work-plan.md`](docs/work-plan.md) |
 | **10. איכות קוד** | 3 שכבות שנאכפות בקומפילציה, `ProblemDetails` אחיד (`GlobalExceptionHandler`) | `dotnet build`: 0 אזהרות |
 | **11. תיעוד** | README זה, [`docs/`](docs/) | [`ai-usage.md`](docs/ai-usage.md), [`known-limitations.md`](docs/known-limitations.md) |
@@ -85,7 +85,7 @@
 - **אין סינון, מיון או דפדוף בצד הלקוח:** כל השאילתה נשלחת כ-Query Parameters (`requests-api.service.ts`). חיפוש בכל קוד ה-Angular לא מוצא `.filter(`, `.sort(` או `.slice(` על רשימת הפניות. ([סעיף 4](#4-מבנה-הפתרון))
 - **ה-Concurrency נאכף בבסיס הנתונים, לא רק ב-UI:** `UPDATE ... WHERE [RowVersion] = @p`. בקשות מקבילות אמיתיות: בכל ההרצות התקבלו `200` אחד ו-`409` אחד. ([סעיף 7](#7-concurrency))
 - **ל-Cache יש אסטרטגיית Invalidation:** מחיקה אחרי כל עדכון מוצלח, ו-Expiration של 60 שניות כגיבוי. ([סעיף 9](#9-cache-ו-invalidation), [`cache.md`](docs/cache.md))
-- **תוכנית העבודה משקפת דרישות, תלויות ומאמץ:** 35 משימות ב-9 Epics, עם תלויות, הערכת זמן (כ-16 שעות) וטבלה שמקשרת כל סעיף במבחן למשימות. ([`work-plan.md`](docs/work-plan.md))
+- **תוכנית העבודה משקפת דרישות, תלויות ומאמץ:** 40 משימות ב-9 Epics, עם תלויות, הערכת זמן (כ-18 שעות) וטבלה שמקשרת כל סעיף במבחן למשימות. ([`work-plan.md`](docs/work-plan.md))
 - **בלי Over-engineering:**
   - **Redis לא מומש בכוונה:** יש שרת API אחד, ולכן `IMemoryCache` מספיק. מה צריך לשנות כשיש כמה שרתים מתועד ב-[`cache.md`](docs/cache.md).
   - **Full-Text Search לא מומש בכוונה:** הוא לא מותקן ב-LocalDB שעליו המערכת רצה (`FULLTEXTSERVICEPROPERTY('IsFullTextInstalled') = 0`). בנוסף, הוא מחפש מילים ולא כל תת-מחרוזת. העלות של `LIKE` נמדדה ומתועדת כשיפור אפשרי. ([סעיף 12](#12-מגבלה-ידועה-ושיפור-אפשרי))
@@ -145,7 +145,7 @@ $env:ConnectionStrings__RequestsDb = "Server=myserver;Database=RequestsManagemen
 ### 3.2 שכפול ה-Repository
 
 ```powershell
-git clone <repository-url> requests-management
+git clone https://github.com/HadasaPes/requests-management-system.git requests-management
 cd requests-management
 ```
 
@@ -226,7 +226,7 @@ dotnet test
 
 אם ה-API רץ באותו זמן מאותה תיקייה, ייתכן שה-Build ייכשל בגלל קבצי DLL נעולים. במקרה כזה יש לעצור את ה-API לפני `dotnet test`.
 
-**Frontend** (Vitest, 7 בדיקות):
+**Frontend** (Vitest, 10 בדיקות ב-3 קבצים):
 
 ```powershell
 cd frontend\requests-app
@@ -425,7 +425,7 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 **עיבוד:**
 - כל השורות נטענות בשאילתה אחת (`WHERE Id IN (...)`).
 - כל פריט מעובד בנפרד, ב-`SaveChanges` משלו, כלומר בטרנזקציה משלו, עם בדיקת `rowVersion` משלו ושורת היסטוריה משלו.
-- הבדיקה וההשמירה משתמשות באותו קוד כמו העדכון הבודד, בלי שכפול.
+- הבדיקה והשמירה משתמשות באותו קוד כמו העדכון הבודד, בלי שכפול.
 - אחרי Conflict, רק הפריט שנכשל מנותק מה-`DbContext`, כדי שלא יישמר שוב עם הפריט הבא.
 
 **התשובה** היא תמיד `200` כשהבקשה עצמה תקינה, עם תוצאה לכל פריט, לפי סדר השליחה:
@@ -560,8 +560,11 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 - החזרת תוכנית העבודה המקורית כש-Claude Code הציע לכתוב תוכנית בדיעבד, ובהמשך בקשה שהיא תתאר בפשטות את מה שנבנה.
 - README בעברית לבודקים.
 - סקירה חיצונית (ChatGPT): בדקתי כל המלצה, קיבלתי את בדיקות ה-Integration הנוספות ואת מיפוי הדרישות, ודחיתי שינויים שלא היו נחוצים.
+- אחרי סקירה חיצונית, ביקשתי את תיקון ה-Race ב-Cache ואת בדיקות ה-Angular.
 - תיעוד מדויק של השימוש ב-AI.
 
-**מה בדקתי בעצמי:** את ה-`409 Conflict` בדפדפן, עם שתי לשוניות. ראיתי את הודעת ה-Conflict ואת טעינת השורה מחדש.
+**מה בדקתי בעצמי:**
+- את ה-`409 Conflict` בדפדפן, עם שתי לשוניות. ראיתי את הודעת ה-Conflict ואת טעינת השורה מחדש.
+- הרצתי את המערכת בעצמי, ומצאתי שהרשימה לא נטענת כשה-API רץ מ-Visual Studio עם פרופיל `https`. ביקשתי את התיקון.
 
 הפירוט לפי שלב: [`docs/ai-usage.md`](docs/ai-usage.md).

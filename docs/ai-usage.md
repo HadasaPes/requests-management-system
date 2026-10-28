@@ -34,10 +34,13 @@ and made the key decisions.
 - Getting an external review (ChatGPT), checking each recommendation, accepting the extra integration tests and the
   requirements mapping, and rejecting changes that were not needed.
 - Making this AI usage documentation accurate.
+- After an external review, asking for the stats cache race fix and the Angular tests.
 
 ## What I tested myself
 
-The 409 conflict in the browser with two tabs: I saw the conflict message and the reload of the row.
+- The 409 conflict in the browser with two tabs: I saw the conflict message and the reload of the row.
+- I ran the system myself and found that the list did not load when the API ran from Visual Studio with the `https`
+  profile, and asked for the fix.
 
 ## Per step
 
@@ -74,3 +77,6 @@ the commit, which I did in every step.
 | Reload after a status update | Claude Code changed the success branch of `onStatusChange` to reload the current page (the existing `reload$`) after replacing the row, so a row that no longer matches the filters leaves the list, and the sort order and `totalCount` stay correct. The 409 branch is unchanged. It added an Angular test, confirmed the test fails without the fix, and ran `npm test` (7 tests) and the production build. | Asked for this fix: after an update, the list could keep a row that no longer matches the filters. |
 | List state tests | Claude Code added Angular tests for the Empty, Error (500) and Retry states of the list, without changing production code. It confirmed the Retry test fails when `retry()` does nothing, restored the code, and ran `npm test` (10 tests) and the production build. The reload after a status update was already in the previous commit, so it was not changed again. | Asked for these tests, so the list states are covered by tests and not only checked in the browser. |
 | HTTPS redirect in Development | The list did not load when the API ran from Visual Studio with the `https` profile. Claude Code found the cause with headless Chrome: `UseHttpsRedirection` redirected the calls to `https://localhost:7122`, and the browser blocked the redirected cross-origin request (CORS). It now calls `UseHttpsRedirection` only outside Development. The `http` profile was already first in `launchSettings.json`; Visual Studio chose `https` from the local `RequestsApi.csproj.user`, which was not changed. It ran `dotnet build`, the 31 tests, and loaded the list in headless Chrome with both profiles (20 rows, no CORS errors). | Reported that the list did not load, and asked for a fix that works with any launch profile. |
+| Publishing to GitHub | Claude Code checked `git status`, put the uncommitted Docker changes that were not tested end to end aside in a `git stash` so they were not pushed, added the `origin` remote, pushed `main` with the full history, and confirmed that GitHub has the same latest commit. | Decided to keep the untested Docker changes out of the repository. |
+| GitHub Actions CI | Claude Code wrote `.github/workflows/ci.yml` (on `windows-latest` because of LocalDB): the backend job starts LocalDB, sets up the SDK from `global.json`, and runs `dotnet build` and `dotnet test`; the frontend job uses Node 22 (required by Angular 22) and runs `npm ci`, `npm test -- --watch=false` and the production build. It added the CI badge to the README and checked the run through the GitHub API: both jobs passed on the first run. | Asked for CI on every push and pull request to `main`, with Windows because of LocalDB. |
+| Documentation consistency | Claude Code added the tasks done after the last work plan update (T4.2, T5.8, T7.7, T7.8, T8.4) with estimates, and updated the requirements table, the total and the README counts. It ran `dotnet test` (31) and `npm test` (10) and made every count match, cited the Angular list state tests in the requirements mapping, re-checked the other mapping rows (CancellationToken methods, `.sqlplan` files, migrations), and fixed a typo and the clone URL. No code changed. | Asked for these fixes, and for my own part in the work to be described accurately. |
