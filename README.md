@@ -193,6 +193,8 @@ dotnet run --project RequestsApi
 
 הפרופיל `http` ב-`launchSettings.json` מפעיל את סביבת `Development`. בסביבה זו פעילים Swagger ו-CORS עבור `http://localhost:4200`.
 
+אפשר להפעיל את ה-API גם מ-Visual Studio, בפרופיל `http` או `https`, והאפליקציה עובדת בשני המקרים. ב-`Development` אין הפניה מ-HTTP ל-HTTPS (`UseHttpsRedirection` פעיל רק מחוץ ל-`Development`), ולכן הקריאות מ-Angular ל-`http://localhost:5069` לא נחסמות ב-CORS.
+
 ### 3.6 הפעלת אפליקציית Angular
 
 בחלון טרמינל שני:

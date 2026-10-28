@@ -58,7 +58,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Not in Development: a redirect from http to https on a cross-origin request makes the browser send Origin: null,
+// so CORS blocks the Angular dev server. With this, the app works with both the http and the https launch profile.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 
