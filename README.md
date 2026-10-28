@@ -63,7 +63,7 @@
 | הפרדה בין Components ל-Services | רק `core/services/requests-api.service.ts` משתמש ב-`HttpClient`; רכיבי התצוגה עובדים עם `input()`/`output()` בלבד | חיפוש בקוד (ראו דגשים) |
 | **6. ביצועים:** Execution Plans, אינדקסים, צוואר בקבוק ושיפור | `RequestsDAL/Data/Configurations`, 2 Migrations, Rebuild ב-`02_seed.sql` | [`performance.md`](docs/performance.md) ו-17 קובצי `.sqlplan`; השוואה לפני ואחרי אינדקס |
 | **7. Cache:** Expiration, Invalidation, Scale-out | `RequestsService` (`StatsCacheDuration` של 60 שניות, `_cache.Remove` אחרי כל עדכון מוצלח, ומונה Generation שמונע שמירת מספרים ישנים) | `GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately`; [`cache.md`](docs/cache.md) |
-| **8. בדיקות** | `backend/RequestsApi.Tests`: 31 בדיקות (13 Integration מול LocalDB, 18 Unit); Angular: 7 בדיקות (Vitest) ב-3 קבצים | [`tests.md`](docs/tests.md) |
+| **8. בדיקות** | `backend/RequestsApi.Tests`: 31 בדיקות (13 Integration מול LocalDB, 18 Unit); Angular: 10 בדיקות (Vitest) ב-3 קבצים | [`tests.md`](docs/tests.md) |
 | **9. תכנון עבודה** | – | [`work-plan.md`](docs/work-plan.md) |
 | **10. איכות קוד** | 3 שכבות שנאכפות בקומפילציה, `ProblemDetails` אחיד (`GlobalExceptionHandler`) | `dotnet build`: 0 אזהרות |
 | **11. תיעוד** | README זה, [`docs/`](docs/) | [`ai-usage.md`](docs/ai-usage.md), [`known-limitations.md`](docs/known-limitations.md) |
@@ -73,7 +73,7 @@
 נבדק ב-27.10.2026:
 
 - `dotnet test`: **31 בדיקות, כולן עברו** (`Failed: 0`).
-- `npm test -- --watch=false` (Angular): **7 בדיקות ב-3 קבצים, כולן עברו**.
+- `npm test -- --watch=false` (Angular): **10 בדיקות ב-3 קבצים, כולן עברו**.
 - `ng build --configuration production`: הסתיים **בלי אזהרות ובלי שגיאות**.
 - `02_seed.sql`: בדיוק **100,000** שורות ב-`Requests`.
 - הוראות ההרצה ב-[סעיף 3](#3-הוראות-הרצה) נבדקו מ-`git clone` נקי ועבדו מקצה לקצה: יצירת ה-DB, ה-Seed, `npm install`, ה-API (Swagger מחזיר `200`) והאפליקציה (הרשימה וה-Stats מוצגים ב-Chrome).
@@ -458,7 +458,7 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 
 ## 10. בדיקות אוטומטיות
 
-31 בדיקות ב-`backend/RequestsApi.Tests`: 13 Integration Tests עם `WebApplicationFactory<Program>` מול SQL Server LocalDB, ו-18 Unit Tests לכללי המעבר. בנוסף, 7 בדיקות Angular (Vitest) ב-3 קבצי `*.spec.ts`.
+31 בדיקות ב-`backend/RequestsApi.Tests`: 13 Integration Tests עם `WebApplicationFactory<Program>` מול SQL Server LocalDB, ו-18 Unit Tests לכללי המעבר. בנוסף, 10 בדיקות Angular (Vitest) ב-3 קבצי `*.spec.ts`.
 
 | נבדק | סוג |
 |---|---|
@@ -477,6 +477,7 @@ OFFSET @__p_1 ROWS FETCH NEXT @__p_2 ROWS ONLY
 | חיפוש חדש מבטל את ה-`GET` הממתין (`switchMap`), ורק התוצאה החדשה מוצגת | Angular |
 | `PATCH` מוצלח: השורה מוחלפת מיד, ואז נשלח `GET` לרשימה עם אותה שאילתה, וה-Stats נטענים מחדש | Angular |
 | `409` ב-`PATCH`: נשלח `GET /api/requests/{id}`, רק השורה הזו מוחלפת, והודעת ה-Conflict מוצגת | Angular |
+| מצבי הרשימה: 0 פניות מציג "No requests match your filters"; `500` מציג הודעת שגיאה וכפתור Retry; Retry שולח את ה-`GET` שוב עם אותה שאילתה, ואחרי הצלחה השורות מוצגות והשגיאה נעלמת | Angular |
 | `app.spec.ts`: האפליקציה נוצרת, ושם המערכת מוצג בסרגל העליון | Angular |
 
 **למה בסיס נתונים אמיתי ולא `EF Core InMemory`:** ה-InMemory Provider לא תומך ב-`rowversion` ובטרנזקציות, ולא מריץ SQL אמיתי. בדיקות ה-Concurrency, ה-Audit בטרנזקציה וה-SQL שנוצר (סינון, מיון, `GROUP BY`) לא היו בודקות את מה שבאמת רץ בייצור. הבדיקות יוצרות בסיס נתונים נפרד (`RequestsDb_Tests`) מה-Migrations, ומאפסות לפני כל בדיקה סט קטן וידוע של 12 פניות.

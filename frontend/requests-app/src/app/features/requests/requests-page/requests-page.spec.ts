@@ -86,6 +86,65 @@ describe('RequestsPage', () => {
     return fixture.debugElement.query(By.directive(RequestsTable)).componentInstance as RequestsTable;
   }
 
+  describe('list states', () => {
+    function errorAlert(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('.message.error') as HTMLElement | null;
+    }
+
+    it('shows the empty message when the API returns no items', () => {
+      createPage([]);
+
+      const text = (fixture.nativeElement as HTMLElement).textContent;
+      expect(text).toContain('No requests match your filters');
+      expect(fixture.debugElement.query(By.directive(RequestsTable))).toBeNull();
+      expect(errorAlert()).toBeNull();
+    });
+
+    it('shows the error message and a Retry button when the API returns 500', () => {
+      fixture = TestBed.createComponent(RequestsPage);
+      fixture.detectChanges();
+      httpTesting.expectOne(`${BASE_URL}/stats`).flush(EMPTY_STATS);
+      expectListRequest().flush(
+        { title: 'An unexpected error occurred.', status: 500 },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
+      fixture.detectChanges();
+
+      const alert = errorAlert();
+      expect(alert).not.toBeNull();
+      expect(alert!.getAttribute('role')).toBe('alert');
+      expect(alert!.textContent).toContain('An unexpected error occurred.');
+      expect(alert!.querySelector('button')?.textContent?.trim()).toBe('Retry');
+      expect(fixture.debugElement.query(By.directive(RequestsTable))).toBeNull();
+    });
+
+    it('sends the GET again on Retry and shows the rows when it succeeds', () => {
+      fixture = TestBed.createComponent(RequestsPage);
+      fixture.detectChanges();
+      httpTesting.expectOne(`${BASE_URL}/stats`).flush(EMPTY_STATS);
+      const failed = expectListRequest();
+      const failedParams = failed.request.params;
+      failed.flush(null, { status: 500, statusText: 'Internal Server Error' });
+      fixture.detectChanges();
+
+      (errorAlert()!.querySelector('button') as HTMLButtonElement).click();
+
+      const retried = expectListRequest();
+      expect(retried.request.params.keys().sort()).toEqual(failedParams.keys().sort());
+      for (const key of failedParams.keys()) {
+        expect(retried.request.params.get(key)).toBe(failedParams.get(key));
+      }
+
+      const rows = [makeRequest(1), makeRequest(2)];
+      retried.flush(pageOf(rows));
+      fixture.detectChanges();
+
+      expect(errorAlert()).toBeNull();
+      expect(table().items()).toEqual(rows);
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Request 2');
+    });
+  });
+
   describe('search stream', () => {
     beforeEach(() => vi.useFakeTimers());
 
