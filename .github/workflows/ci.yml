@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (.NET build and tests)
+    # Windows, because the integration tests use SQL Server LocalDB.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up .NET SDK from global.json
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: backend/global.json
+
+      - name: Start SQL Server LocalDB
+        run: |
+          sqllocaldb start MSSQLLocalDB
+          sqllocaldb info MSSQLLocalDB
+
+      - name: Build
+        run: dotnet build RequestsManagement.sln --configuration Release
+
+      - name: Test
+        run: dotnet test RequestsManagement.sln --configuration Release --no-build --verbosity normal
+
+  frontend:
+    name: Frontend (Angular tests and production build)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: frontend/requests-app
+    steps:
+      - uses: actions/checkout@v5
+
+      # Angular 22 requires Node ^22.22.3 || ^24.15.0.
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/requests-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test -- --watch=false
+
+      - name: Production build
+        run: npx ng build --configuration production

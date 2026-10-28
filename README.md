@@ -1,3 +1,5 @@
+[![CI](https://github.com/HadasaPes/requests-management-system/actions/workflows/ci.yml/badge.svg)](https://github.com/HadasaPes/requests-management-system/actions/workflows/ci.yml)
+
 # מערכת לניהול פניות (Requests Management System)
 
 מערכת Full Stack לניהול פניות שירות: `.NET 8 Web API` עם `EF Core` ו-`SQL Server`, ו-`Angular` בצד הלקוח.
