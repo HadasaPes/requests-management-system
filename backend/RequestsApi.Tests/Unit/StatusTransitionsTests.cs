@@ -11,7 +11,7 @@ public class StatusTransitionsTests
     [InlineData(RequestStatus.InProgress, RequestStatus.Waiting, true)]
     [InlineData(RequestStatus.InProgress, RequestStatus.Completed, true)]
     [InlineData(RequestStatus.Waiting, RequestStatus.InProgress, true)]
-    // Forbidden: skipping steps, going back, leaving Completed, staying the same
+    // Forbidden
     [InlineData(RequestStatus.New, RequestStatus.Waiting, false)]
     [InlineData(RequestStatus.New, RequestStatus.Completed, false)]
     [InlineData(RequestStatus.InProgress, RequestStatus.New, false)]

@@ -2,12 +2,6 @@ using RequestsDAL.Entities;
 
 namespace RequestsApi.Tests.Infrastructure;
 
-/// <summary>
-/// The known data set, restored before every integration test.
-///   Ids 1-5:  Acme Ltd, New, High, created on 1-5 Jan 2026 (the combined-filter target)
-///   Ids 6-12: one difference each, so every filter is needed to exclude them
-/// Totals - Status: New 8, InProgress 2, Waiting 1, Completed 1. Priority: Low 2, Medium 3, High 7.
-/// </summary>
 public static class TestData
 {
     public const string Acme = "Acme Ltd";

@@ -14,7 +14,7 @@ public class GetRequestsTests : IntegrationTestBase
     [Fact]
     public async Task GetRequests_CombinedFiltersAndPaging_ReturnsExactPageAndTotalCount()
     {
-        // Arrange: ids 2-5 match all filters (id 1 is created before createdFrom; 6, 7, 8 differ in one field each).
+        // Arrange
         var url = "/api/requests?status=New&priority=High&organizationName=Acme%20Ltd&createdFrom=2026-01-02"
                   + "&sortBy=createdAt&sortDirection=asc&page=2&pageSize=2";
 

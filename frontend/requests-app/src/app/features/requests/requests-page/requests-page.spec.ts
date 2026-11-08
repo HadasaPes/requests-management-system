@@ -57,7 +57,6 @@ describe('RequestsPage', () => {
     vi.useRealTimers();
   });
 
-  /** Renders the page and answers the initial stats and list calls. */
   function createPage(initialItems: RequestDto[] = []): void {
     fixture = TestBed.createComponent(RequestsPage);
     fixture.detectChanges();
@@ -182,7 +181,6 @@ describe('RequestsPage', () => {
       const newRequest = expectListRequest();
       expect(newRequest.request.params.get('search')).toBe('new');
 
-      // switchMap unsubscribed from the old call, which cancels the HTTP request.
       expect(oldRequest.cancelled).toBe(true);
       expect(newRequest.cancelled).toBe(false);
 
@@ -217,7 +215,6 @@ describe('RequestsPage', () => {
       httpTesting.expectOne(`${BASE_URL}/1/status`).flush(updated);
       fixture.detectChanges();
 
-      // Shown at once, before the reload returns.
       expect(table().items()[0]).toEqual(updated);
 
       const reload = expectListRequest();
@@ -227,7 +224,6 @@ describe('RequestsPage', () => {
       }
       httpTesting.expectOne(`${BASE_URL}/stats`).flush(EMPTY_STATS);
 
-      // The list now shows the server's page (for example, row 1 left it because it no longer matches a filter).
       reload.flush({ ...pageOf([makeRequest(2)]), totalCount: 1 });
       fixture.detectChanges();
       expect(table().items().map((r) => r.id)).toEqual([2]);
@@ -261,7 +257,6 @@ describe('RequestsPage', () => {
       reload.flush(latest);
       fixture.detectChanges();
 
-      // Only row 1 is replaced; row 2 is the same object, and the list is not reloaded (verify() in afterEach).
       const items = table().items();
       expect(items).toHaveLength(2);
       expect(items[0]).toEqual(latest);

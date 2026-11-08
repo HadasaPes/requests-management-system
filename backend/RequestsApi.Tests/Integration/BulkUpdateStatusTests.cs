@@ -22,7 +22,6 @@ public class BulkUpdateStatusTests : IntegrationTestBase
         var stale = await GetRequestAsync(TestData.Ids.AcmeNewHighFirst);
         var completed = await GetRequestAsync(TestData.Ids.Completed);
 
-        // Someone else changes the stale request after we read it (a no-op UPDATE still changes the rowversion).
         await using (var dbContext = Fixture.CreateDbContext())
         {
             await dbContext.Database.ExecuteSqlAsync($"UPDATE Requests SET Title = Title WHERE Id = {stale.Id}");
@@ -45,7 +44,7 @@ public class BulkUpdateStatusTests : IntegrationTestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/requests/bulk-status", body);
 
-        // Assert: the response
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = (await response.Content.ReadFromJsonAsync<BulkStatusUpdateResponseDto>())!;
         Assert.Equal((5, 2, 3), (result.Requested, result.Succeeded, result.Failed));
@@ -61,7 +60,6 @@ public class BulkUpdateStatusTests : IntegrationTestBase
         Assert.All(result.Results.Where(r => r.Outcome == "Updated"), r => Assert.NotNull(r.RowVersion));
         Assert.All(result.Results.Where(r => r.Outcome != "Updated"), r => Assert.False(string.IsNullOrEmpty(r.Error)));
 
-        // Assert: the database - only the valid items changed, each with exactly one history row.
         await using var db = Fixture.CreateDbContext();
         var rows = await db.Requests
             .Where(r => new[] { valid1.Id, valid2.Id, stale.Id, completed.Id }.Contains(r.Id))
@@ -79,19 +77,16 @@ public class BulkUpdateStatusTests : IntegrationTestBase
     [InlineData("empty list")]
     public async Task BulkUpdateStatus_InvalidRequest_Returns400AndChangesNothing(string invalidCase)
     {
-        // Arrange: the items use the real, current rowVersions, so without the request-level
-        // validation the New requests among them would be updated.
+        // Arrange
         var before = await GetStoredRequestsAsync();
         var historyBefore = await CountAllHistoryRowsAsync();
         var realItems = before.Select(r => new { id = r.Id, rowVersion = r.RowVersion }).ToList();
 
         var items = invalidCase switch
         {
-            // 12 real requests + 89 ids that do not exist = 101 items.
             "101 items" => realItems
                 .Concat(Enumerable.Range(1_000, 101 - realItems.Count).Select(id => new { id, rowVersion = "AAAAAAAAB9E=" }))
                 .ToList(),
-            // A New request twice, plus another valid New request.
             "duplicate ids" => realItems
                 .Where(i => i.id is TestData.Ids.AcmeNewLow or TestData.Ids.GlobexNewHigh)
                 .Append(realItems.Single(i => i.id == TestData.Ids.AcmeNewLow))
@@ -104,11 +99,10 @@ public class BulkUpdateStatusTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/requests/bulk-status",
             new { status = "InProgress", changedBy = "Test User", items });
 
-        // Assert: the response
+        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(["items"], await ReadErrorFieldsAsync(response));
 
-        // Assert: the database - no request changed (status, RowVersion, UpdatedAt) and no history row was added.
         Assert.Equal(before, await GetStoredRequestsAsync());
         Assert.Equal(historyBefore, await CountAllHistoryRowsAsync());
     }

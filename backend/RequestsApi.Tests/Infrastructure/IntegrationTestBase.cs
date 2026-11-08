@@ -6,7 +6,6 @@ using RequestsDAL.Entities;
 
 namespace RequestsApi.Tests.Infrastructure;
 
-/// <summary>Restores the known data before each test and provides the shared HTTP and database helpers.</summary>
 [Collection(ApiCollection.Name)]
 public abstract class IntegrationTestBase : IAsyncLifetime
 {
@@ -40,7 +39,6 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         return await dbContext.RequestStatusHistory.CountAsync(h => h.RequestId == requestId);
     }
 
-    /// <summary>Every request as stored in the database, to assert that a rejected call changed nothing.</summary>
     protected async Task<IReadOnlyList<StoredRequest>> GetStoredRequestsAsync()
     {
         await using var dbContext = Fixture.CreateDbContext();
@@ -54,7 +52,6 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         return await dbContext.RequestStatusHistory.CountAsync();
     }
 
-    /// <summary>The field names in the "errors" object of a 400 ValidationProblemDetails response.</summary>
     protected static async Task<IReadOnlyList<string>> ReadErrorFieldsAsync(HttpResponseMessage response)
     {
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);

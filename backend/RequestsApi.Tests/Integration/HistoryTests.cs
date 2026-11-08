@@ -24,7 +24,7 @@ public class HistoryTests : IntegrationTestBase
         // Act
         var history = await Client.GetFromJsonAsync<List<RequestStatusHistoryDto>>($"/api/requests/{request.Id}/history");
 
-        // Assert: one entry, with every field filled from the update.
+        // Assert
         var entry = Assert.Single(history!);
         Assert.Equal("New", entry.PreviousStatus);
         Assert.Equal("InProgress", entry.NewStatus);

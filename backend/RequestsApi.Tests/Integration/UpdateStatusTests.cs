@@ -18,7 +18,7 @@ public class UpdateStatusTests : IntegrationTestBase
         // Arrange
         var request = await GetRequestAsync(TestData.Ids.InitechNew);
 
-        // Act: both PATCHes are started before either is awaited, so they run at the same time.
+        // Act
         var responses = await Task.WhenAll(
             PatchStatusAsync(request.Id, "InProgress", request.RowVersion, "User A"),
             PatchStatusAsync(request.Id, "InProgress", request.RowVersion, "User B"));
@@ -33,18 +33,17 @@ public class UpdateStatusTests : IntegrationTestBase
     [Fact]
     public async Task UpdateStatus_InvalidTransition_Returns400AndChangesNothing()
     {
-        // Arrange: Completed is final; the rowVersion is current, so only the transition rule can reject it.
+        // Arrange
         var request = await GetRequestAsync(TestData.Ids.Completed);
         var before = (await GetStoredRequestsAsync()).Single(r => r.Id == request.Id);
 
         // Act
         var response = await PatchStatusAsync(request.Id, "New", request.RowVersion);
 
-        // Assert: the response
+        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(["status"], await ReadErrorFieldsAsync(response));
 
-        // Assert: the database - same status, RowVersion and UpdatedAt, and no history row.
         var after = (await GetStoredRequestsAsync()).Single(r => r.Id == request.Id);
         Assert.Equal(before, after);
         Assert.Equal(RequestStatus.Completed, after.Status);
@@ -54,7 +53,7 @@ public class UpdateStatusTests : IntegrationTestBase
     [Fact]
     public async Task UpdateStatus_UnknownId_Returns404()
     {
-        // Arrange: a well-formed body, so only the id can cause the error.
+        // Arrange
         const string anyRowVersion = "AAAAAAAAB9E=";
 
         // Act
@@ -68,7 +67,7 @@ public class UpdateStatusTests : IntegrationTestBase
     [Fact]
     public async Task GetStats_AfterSuccessfulStatusUpdate_ReturnsUpdatedCountsImmediately()
     {
-        // Arrange: the first call stores the stats in the cache.
+        // Arrange
         var before = await Client.GetFromJsonAsync<RequestStatsDto>("/api/requests/stats");
         var request = await GetRequestAsync(TestData.Ids.InitechNew);
 
@@ -76,7 +75,7 @@ public class UpdateStatusTests : IntegrationTestBase
         var patch = await PatchStatusAsync(request.Id, "InProgress", request.RowVersion);
         var after = await Client.GetFromJsonAsync<RequestStatsDto>("/api/requests/stats");
 
-        // Assert: the seed has 8 New and 2 InProgress.
+        // Assert
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
         Assert.Equal(8, before!.CountByStatus["New"]);
         Assert.Equal(2, before.CountByStatus["InProgress"]);
