@@ -2,7 +2,6 @@ namespace RequestsBL.Validation;
 
 internal static class EnumParsing
 {
-    // Names only (case-insensitive): unlike Enum.TryParse, numbers such as "1" are rejected.
     public static TEnum? ParseOptional<TEnum>(
         string? value, string field, Dictionary<string, string[]> errors, bool camelCaseNames = false)
         where TEnum : struct, Enum

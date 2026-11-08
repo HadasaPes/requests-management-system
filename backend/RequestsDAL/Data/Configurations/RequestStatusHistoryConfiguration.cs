@@ -24,7 +24,6 @@ public class RequestStatusHistoryConfiguration : IEntityTypeConfiguration<Reques
             .HasForeignKey(h => h.RequestId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // History of one request in order; also serves as the index for the RequestId foreign key.
         builder.HasIndex(h => new { h.RequestId, h.ChangedAt });
     }
 }

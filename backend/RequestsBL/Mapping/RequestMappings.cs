@@ -15,11 +15,9 @@ public static class RequestMappings
         Status = request.Status.ToString(),
         Priority = request.Priority.ToString(),
         AssignedTo = request.AssignedTo,
-        // datetime2 has no time zone; values are stored as UTC, so mark them as UTC ("Z" in JSON).
         CreatedAt = DateTime.SpecifyKind(request.CreatedAt, DateTimeKind.Utc),
         UpdatedAt = DateTime.SpecifyKind(request.UpdatedAt, DateTimeKind.Utc),
         RowVersion = Convert.ToBase64String(request.RowVersion),
-        // From the same rules the update uses, so the UI never offers a transition the API would reject.
         AllowedNextStatuses = StatusTransitions.GetAllowedNext(request.Status).Select(s => s.ToString()).ToList()
     };
 
@@ -44,7 +42,6 @@ public static class RequestMappings
         };
     }
 
-    // Lists every enum value in declaration order, with 0 for values that have no requests.
     private static Dictionary<string, int> CountForEveryValue<TEnum>(IReadOnlyDictionary<TEnum, int> counts)
         where TEnum : struct, Enum =>
         Enum.GetValues<TEnum>().ToDictionary(

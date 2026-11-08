@@ -12,7 +12,6 @@ public class RequestStatusHistory
 
     public RequestStatus NewStatus { get; set; }
 
-    // UTC.
     public DateTime ChangedAt { get; set; }
 
     public string ChangedBy { get; set; } = string.Empty;

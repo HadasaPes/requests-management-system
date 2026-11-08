@@ -39,7 +39,6 @@ public class RequestsRepository : IRequestsRepository
 
     public async Task<RequestCounts> GetCountsAsync(CancellationToken cancellationToken)
     {
-        // One GROUP BY (Status, Priority) round trip returns at most 12 rows; the totals are summed from them.
         var groups = await _dbContext.Requests
             .GroupBy(r => new { r.Status, r.Priority })
             .Select(g => new { g.Key.Status, g.Key.Priority, Count = g.Count() })
@@ -53,7 +52,6 @@ public class RequestsRepository : IRequestsRepository
     public Task<Request?> GetByIdForUpdateAsync(int id, CancellationToken cancellationToken) =>
         _dbContext.Requests.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
 
-    // One query: WHERE [Id] IN (SELECT [value] FROM OPENJSON(@ids)). Missing ids are simply not returned.
     public async Task<IReadOnlyList<Request>> GetByIdsForUpdateAsync(
         IReadOnlyCollection<int> ids, CancellationToken cancellationToken) =>
         await _dbContext.Requests
@@ -81,18 +79,15 @@ public class RequestsRepository : IRequestsRepository
         request.Status = newStatus;
         request.UpdatedAt = changedAtUtc;
 
-        // The client's RowVersion becomes the original value, so the UPDATE's WHERE checks it.
         _dbContext.Entry(request).Property(r => r.RowVersion).OriginalValue = expectedRowVersion;
 
         try
         {
-            // One SaveChanges = one transaction: the UPDATE and the history INSERT succeed or fail together.
             await _dbContext.SaveChangesAsync(cancellationToken);
             return StatusUpdateResult.Updated;
         }
         catch (DbUpdateConcurrencyException)
         {
-            // Detach only this request and its history row, so the next bulk item's SaveChanges does not retry them.
             _dbContext.Entry(history).State = EntityState.Detached;
             _dbContext.Entry(request).State = EntityState.Detached;
             return StatusUpdateResult.Conflict;
@@ -161,7 +156,6 @@ public class RequestsRepository : IRequestsRepository
             _ => OrderBy(source, r => r.CreatedAt, descending)
         };
 
-    // Id is always the final tie-breaker, so rows with equal sort values keep a stable order across pages.
     private static IQueryable<Request> OrderBy<TKey>(
         IQueryable<Request> source, Expression<Func<Request, TKey>> keySelector, bool descending) =>
         descending

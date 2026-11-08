@@ -14,10 +14,8 @@ public class Request
 
     public string? AssignedTo { get; set; }
 
-    // UTC.
     public DateTime CreatedAt { get; set; }
 
-    // UTC.
     public DateTime UpdatedAt { get; set; }
 
     public byte[] RowVersion { get; set; } = [];

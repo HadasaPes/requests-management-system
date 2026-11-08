@@ -9,7 +9,6 @@ import { distinctUntilChanged, map } from 'rxjs';
 import { RequestFilters } from '../../../../core/models/request-query.model';
 import { REQUEST_PRIORITIES, REQUEST_STATUSES, RequestPriority, RequestStatus } from '../../../../core/models/request.model';
 
-// Reports changes only; the page decides what to load.
 @Component({
   selector: 'app-requests-filters',
   imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule],
@@ -26,17 +25,14 @@ export class RequestsFilters {
   protected readonly form = new FormGroup({
     status: new FormControl<RequestStatus | null>(null),
     priority: new FormControl<RequestPriority | null>(null),
-    // Exact-match text filters are applied on blur or Enter, not on every keystroke.
     organizationName: new FormControl<string | null>(null, { updateOn: 'blur' }),
     assignedTo: new FormControl<string | null>(null, { updateOn: 'blur' }),
     createdFrom: new FormControl<string | null>(null),
     createdTo: new FormControl<string | null>(null),
   });
 
-  // Every keystroke; the page debounces it.
   readonly searchChange = outputFromObservable(this.search.valueChanges);
 
-  // Only on a real change (Enter and then blur on the same value emits once).
   readonly filtersChange = outputFromObservable(
     this.form.valueChanges.pipe(
       map(() => toFilters(this.form.getRawValue())),
@@ -44,7 +40,6 @@ export class RequestsFilters {
     ),
   );
 
-  // Enter applies a text filter by leaving the field (updateOn: 'blur').
   protected apply(event: Event): void {
     (event.target as HTMLInputElement).blur();
   }

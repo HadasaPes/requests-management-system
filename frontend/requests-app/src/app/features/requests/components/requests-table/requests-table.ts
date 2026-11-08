@@ -18,7 +18,6 @@ export interface StatusChange {
   status: RequestStatus;
 }
 
-// Sorting, paging, status changes and history are only reported; the page does the work.
 @Component({
   selector: 'app-requests-table',
   imports: [DatePipe, MatTableModule, MatSortModule, MatPaginatorModule, MatButtonModule, StatusEditor],
@@ -29,11 +28,9 @@ export interface StatusChange {
 export class RequestsTable {
   readonly items = input.required<RequestDto[]>();
   readonly totalCount = input.required<number>();
-  // 1-based, like the API.
   readonly page = input.required<number>();
   readonly pageSize = input.required<number>();
   readonly sort = input.required<RequestSort>();
-  // False until the user entered a name.
   readonly canEdit = input.required<boolean>();
   readonly savingIds = input.required<ReadonlySet<number>>();
 
@@ -47,7 +44,6 @@ export class RequestsTable {
   ];
   protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
-  // matSortDisableClear in the template: a column toggles asc/desc and never goes back to "no sort".
   protected onSort(sort: Sort): void {
     this.sortChange.emit({ sortBy: sort.active as RequestSortField, sortDirection: sort.direction as SortDirection });
   }

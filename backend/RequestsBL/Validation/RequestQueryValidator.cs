@@ -10,7 +10,6 @@ public static class RequestQueryValidator
     public const int MaxPageSize = 100;
     public const int MaxSearchLength = 100;
 
-    // Guards against int overflow in (page - 1) * pageSize.
     public const int MaxPage = 1_000_000;
 
     public static RequestQuery ToQuery(RequestQueryParameters parameters)
@@ -29,7 +28,6 @@ public static class RequestQueryValidator
 
         var status = EnumParsing.ParseOptional<RequestStatus>(parameters.Status, "status", errors);
         var priority = EnumParsing.ParseOptional<RequestPriority>(parameters.Priority, "priority", errors);
-        // sortBy values are shown in camelCase (createdAt) to match the query-string style.
         var sortBy = EnumParsing.ParseOptional<RequestSortField>(parameters.SortBy, "sortBy", errors, camelCaseNames: true)
             ?? RequestSortField.CreatedAt;
 
@@ -81,7 +79,6 @@ public static class RequestQueryValidator
         };
     }
 
-    // Model binding turns "...Z" / "+02:00" into local time; values without an offset are treated as UTC.
     private static DateTime? ToUtc(DateTime? value) => value switch
     {
         null => null,
@@ -90,7 +87,6 @@ public static class RequestQueryValidator
         { } utc => utc
     };
 
-    // createdTo is inclusive: a date-only value covers the whole day, otherwise add one tick (datetime2 resolution).
     private static DateTime? ToExclusiveUpperBound(DateTime? createdTo) => createdTo switch
     {
         null => null,

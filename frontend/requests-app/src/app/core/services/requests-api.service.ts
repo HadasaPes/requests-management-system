@@ -9,7 +9,6 @@ import { RequestStatusHistoryDto } from '../models/request-status-history.model'
 import { RequestDto } from '../models/request.model';
 import { UpdateStatusRequest } from '../models/update-status-request.model';
 
-// HTTP calls only: no state, no caching, no error handling.
 @Injectable({ providedIn: 'root' })
 export class RequestsApiService {
   private readonly http = inject(HttpClient);
@@ -27,18 +26,15 @@ export class RequestsApiService {
     return this.http.get<RequestStats>(`${this.baseUrl}/stats`);
   }
 
-  // 409 if the rowVersion is no longer current.
   updateStatus(id: number, body: UpdateStatusRequest): Observable<RequestDto> {
     return this.http.patch<RequestDto>(`${this.baseUrl}/${id}/status`, body);
   }
 
-  // Newest first.
   getHistory(id: number): Observable<RequestStatusHistoryDto[]> {
     return this.http.get<RequestStatusHistoryDto[]>(`${this.baseUrl}/${id}/history`);
   }
 }
 
-// Empty values are left out, so the API treats them as "no filter".
 function toHttpParams(query: RequestQuery): HttpParams {
   let params = new HttpParams();
   for (const [key, value] of Object.entries(query)) {

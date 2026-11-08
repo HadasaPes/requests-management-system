@@ -1,6 +1,5 @@
 namespace RequestsBL.Dtos;
 
-/// <summary>One status change of a request.</summary>
 public record RequestStatusHistoryDto
 {
     public int Id { get; init; }
@@ -9,7 +8,6 @@ public record RequestStatusHistoryDto
 
     public string NewStatus { get; init; } = string.Empty;
 
-    /// <summary>UTC.</summary>
     public DateTime ChangedAt { get; init; }
 
     public string ChangedBy { get; init; } = string.Empty;

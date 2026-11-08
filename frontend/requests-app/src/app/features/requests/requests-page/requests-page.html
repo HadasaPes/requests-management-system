@@ -9,7 +9,6 @@
   (filtersChange)="onFiltersChange($event)"
 />
 
-<!-- One subscription to the list stream for the whole view. -->
 @if (list$ | async; as list) {
   <div class="list">
     <div class="progress">

@@ -15,11 +15,9 @@ public class RequestsService : IRequestsService
     private const string ConflictMessage =
         "The request was changed by someone else. Reload it and try again.";
 
-    // The stats are global (no filters), so one key is enough.
     private const string StatsCacheKey = "requests:stats";
     private static readonly TimeSpan StatsCacheDuration = TimeSpan.FromSeconds(60);
 
-    // Incremented on every invalidation. Static because the service is scoped while the cache is shared.
     private static long _statsGeneration;
     private static readonly object StatsCacheLock = new();
 
@@ -73,10 +71,8 @@ public class RequestsService : IRequestsService
 
         lock (StatsCacheLock)
         {
-            // If a status changed while the query ran, these numbers may be old: return them, but do not cache them.
             if (_statsGeneration == generation)
             {
-                // Absolute, not sliding, so stats that are read often still refresh.
                 _cache.Set(StatsCacheKey, stats, StatsCacheDuration);
             }
         }
@@ -108,7 +104,6 @@ public class RequestsService : IRequestsService
                 throw new ValidationException("status", change.Error!);
         }
 
-        // ChangedBy is a person's name, so it is not logged.
         _logger.LogInformation("Request {RequestId} status changed from {PreviousStatus} to {NewStatus}.",
             id, previousStatus, valid.NewStatus);
 
@@ -120,7 +115,6 @@ public class RequestsService : IRequestsService
     {
         var valid = StatusUpdateValidator.ValidateBulk(update);
 
-        // All rows in one query; ids that do not exist are simply missing from the dictionary.
         var requestsById = (await _repository.GetByIdsForUpdateAsync(
                 valid.Items.Select(i => i.Id).ToList(), cancellationToken))
             .ToDictionary(r => r.Id);
@@ -128,7 +122,6 @@ public class RequestsService : IRequestsService
         var results = new List<BulkStatusUpdateItemResultDto>(valid.Items.Count);
         var counts = Enum.GetValues<BulkItemOutcome>().ToDictionary(o => o, _ => 0);
 
-        // Items are processed one by one, each in its own transaction, so a failed item never rolls back the others.
         foreach (var item in valid.Items)
         {
             var result = await ProcessBulkItemAsync(
@@ -137,7 +130,6 @@ public class RequestsService : IRequestsService
             results.Add(result.Dto);
         }
 
-        // One summary line per bulk request, not one per item.
         _logger.LogInformation(
             "Bulk status update to {NewStatus}: {Requested} requested, {Updated} updated, {NotFound} not found, {Conflict} conflicts, {InvalidTransition} invalid transitions.",
             valid.NewStatus, valid.Items.Count, counts[BulkItemOutcome.Updated], counts[BulkItemOutcome.NotFound],
@@ -178,11 +170,9 @@ public class RequestsService : IRequestsService
             (outcome, new BulkStatusUpdateItemResultDto { Id = id, Outcome = outcome.ToString(), Error = error });
     }
 
-    // Returns the outcome instead of throwing or logging, so the single and the bulk update each report in their own way.
     private async Task<ChangeResult> ApplyStatusChangeAsync(
         Request request, RequestStatus newStatus, byte[] rowVersion, string changedBy, CancellationToken cancellationToken)
     {
-        // Checked before the workflow, so the client is not told "invalid transition" about a status it has not seen.
         if (!request.RowVersion.SequenceEqual(rowVersion))
         {
             return new ChangeResult(ChangeOutcome.StaleRowVersion);
@@ -196,13 +186,11 @@ public class RequestsService : IRequestsService
         var result = await _repository.UpdateStatusAsync(
             request, newStatus, rowVersion, changedBy, DateTime.UtcNow, cancellationToken);
 
-        // Conflict here means someone else saved between our read and our UPDATE; the database rejected the UPDATE.
         if (result == StatusUpdateResult.Conflict)
         {
             return new ChangeResult(ChangeOutcome.ConflictOnSave);
         }
 
-        // Only successful changes invalidate the stats; a bulk with zero updates leaves the cache untouched.
         lock (StatsCacheLock)
         {
             _statsGeneration++;

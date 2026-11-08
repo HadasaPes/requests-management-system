@@ -16,7 +16,6 @@ public class BulkUpdateStatusTests : IntegrationTestBase
     [Fact]
     public async Task BulkUpdateStatus_MixedItems_ReturnsOutcomePerItemAndChangesOnlyValidItems()
     {
-        // Arrange
         var valid1 = await GetRequestAsync(TestData.Ids.AcmeNewLow);
         var valid2 = await GetRequestAsync(TestData.Ids.GlobexNewHigh);
         var stale = await GetRequestAsync(TestData.Ids.AcmeNewHighFirst);
@@ -41,10 +40,8 @@ public class BulkUpdateStatusTests : IntegrationTestBase
             }
         };
 
-        // Act
         var response = await Client.PostAsJsonAsync("/api/requests/bulk-status", body);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = (await response.Content.ReadFromJsonAsync<BulkStatusUpdateResponseDto>())!;
         Assert.Equal((5, 2, 3), (result.Requested, result.Succeeded, result.Failed));
@@ -77,7 +74,6 @@ public class BulkUpdateStatusTests : IntegrationTestBase
     [InlineData("empty list")]
     public async Task BulkUpdateStatus_InvalidRequest_Returns400AndChangesNothing(string invalidCase)
     {
-        // Arrange
         var before = await GetStoredRequestsAsync();
         var historyBefore = await CountAllHistoryRowsAsync();
         var realItems = before.Select(r => new { id = r.Id, rowVersion = r.RowVersion }).ToList();
@@ -95,11 +91,9 @@ public class BulkUpdateStatusTests : IntegrationTestBase
             _ => throw new ArgumentOutOfRangeException(nameof(invalidCase))
         };
 
-        // Act
         var response = await Client.PostAsJsonAsync("/api/requests/bulk-status",
             new { status = "InProgress", changedBy = "Test User", items });
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(["items"], await ReadErrorFieldsAsync(response));
 

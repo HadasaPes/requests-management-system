@@ -4,10 +4,8 @@
 
 namespace RequestsDAL.Data.Migrations
 {
-    /// <inheritdoc />
     public partial class ReplacePriorityIndexWithPriorityCreatedAt : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
@@ -20,7 +18,6 @@ namespace RequestsDAL.Data.Migrations
                 columns: new[] { "Priority", "CreatedAt" });
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(

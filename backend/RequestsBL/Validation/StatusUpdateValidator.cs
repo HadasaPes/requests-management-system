@@ -15,7 +15,6 @@ public static class StatusUpdateValidator
     public const int MaxChangedByLength = 100;
     public const int MaxBulkItems = 100;
 
-    // SQL Server rowversion is always 8 bytes.
     private const int RowVersionLength = 8;
 
     public static ValidStatusUpdate Validate(UpdateStatusRequestDto dto)
@@ -34,7 +33,6 @@ public static class StatusUpdateValidator
         return new ValidStatusUpdate(status!.Value, rowVersion!, changedBy!);
     }
 
-    // If anything in the request is invalid, no item is processed.
     public static ValidBulkStatusUpdate ValidateBulk(BulkStatusUpdateRequestDto dto)
     {
         var errors = new Dictionary<string, string[]>();
@@ -45,7 +43,6 @@ public static class StatusUpdateValidator
 
         if (dto.Items is null || dto.Items.Count == 0 || dto.Items.Count > MaxBulkItems)
         {
-            // Items are not checked one by one when the count is wrong, to keep the error list short.
             errors["items"] = [$"items must contain between 1 and {MaxBulkItems} items."];
         }
         else

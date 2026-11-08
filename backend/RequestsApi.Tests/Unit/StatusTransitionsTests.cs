@@ -6,12 +6,10 @@ namespace RequestsApi.Tests.Unit;
 public class StatusTransitionsTests
 {
     [Theory]
-    // Allowed
     [InlineData(RequestStatus.New, RequestStatus.InProgress, true)]
     [InlineData(RequestStatus.InProgress, RequestStatus.Waiting, true)]
     [InlineData(RequestStatus.InProgress, RequestStatus.Completed, true)]
     [InlineData(RequestStatus.Waiting, RequestStatus.InProgress, true)]
-    // Forbidden
     [InlineData(RequestStatus.New, RequestStatus.Waiting, false)]
     [InlineData(RequestStatus.New, RequestStatus.Completed, false)]
     [InlineData(RequestStatus.InProgress, RequestStatus.New, false)]
@@ -24,10 +22,8 @@ public class StatusTransitionsTests
     [InlineData(RequestStatus.Completed, RequestStatus.Completed, false)]
     public void GetError_Transition_ReturnsNullOnlyWhenAllowed(RequestStatus from, RequestStatus to, bool expectedAllowed)
     {
-        // Act
         var error = StatusTransitions.GetError(from, to);
 
-        // Assert
         Assert.Equal(expectedAllowed, error is null);
         Assert.Equal(expectedAllowed, StatusTransitions.IsAllowed(from, to));
     }
@@ -39,10 +35,8 @@ public class StatusTransitionsTests
     [InlineData(RequestStatus.Completed, new RequestStatus[0])]
     public void GetAllowedNext_Status_ReturnsExactlyTheAllowedTransitions(RequestStatus from, RequestStatus[] expected)
     {
-        // Act
         var allowedNext = StatusTransitions.GetAllowedNext(from);
 
-        // Assert
         Assert.Equal(expected, allowedNext);
     }
 }

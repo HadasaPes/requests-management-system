@@ -11,7 +11,6 @@ public static class DataAccessLayerServiceCollectionExtensions
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
-        // AddDbContext registers the context with a Scoped lifetime (one per HTTP request).
         services.AddDbContext<RequestsDbContext>(options => options.UseSqlServer(connectionString));
 
         services.AddScoped<IRequestsRepository, RequestsRepository>();

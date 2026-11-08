@@ -14,14 +14,11 @@ public class GetRequestsTests : IntegrationTestBase
     [Fact]
     public async Task GetRequests_CombinedFiltersAndPaging_ReturnsExactPageAndTotalCount()
     {
-        // Arrange
         var url = "/api/requests?status=New&priority=High&organizationName=Acme%20Ltd&createdFrom=2026-01-02"
                   + "&sortBy=createdAt&sortDirection=asc&page=2&pageSize=2";
 
-        // Act
         var page = await Client.GetFromJsonAsync<PagedResponse<RequestDto>>(url);
 
-        // Assert
         Assert.NotNull(page);
         Assert.Equal(4, page.TotalCount);
         Assert.Equal(2, page.TotalPages);
@@ -41,10 +38,8 @@ public class GetRequestsTests : IntegrationTestBase
     [InlineData("status=Done", "status")]
     public async Task GetRequests_InvalidQueryParameter_Returns400WithFieldError(string query, string expectedField)
     {
-        // Act
         var response = await Client.GetAsync($"/api/requests?{query}");
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal([expectedField], await ReadErrorFieldsAsync(response));
     }

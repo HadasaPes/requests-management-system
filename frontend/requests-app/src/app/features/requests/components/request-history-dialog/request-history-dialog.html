@@ -22,7 +22,6 @@
               <span aria-label="to">→</span>
               <span class="chip status-{{ entry.newStatus }}">{{ entry.newStatus }}</span>
             </div>
-            <!-- changedAt is UTC; the date pipe shows it in local time. -->
             <div class="meta">by <b>{{ entry.changedBy }}</b> · {{ entry.changedAt | date: 'd MMM y, HH:mm:ss' }}</div>
           </li>
         }

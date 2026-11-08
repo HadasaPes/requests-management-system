@@ -18,7 +18,6 @@ type HistoryState =
   | { kind: 'loaded'; entries: RequestStatusHistoryDto[] }
   | { kind: 'error'; error: ErrorMessage };
 
-// Opened with MatDialog; loads its own data.
 @Component({
   selector: 'app-request-history-dialog',
   imports: [AsyncPipe, DatePipe, MatDialogModule, MatButtonModule, MatProgressBarModule],
@@ -32,7 +31,6 @@ export class RequestHistoryDialog {
 
   private readonly retry$ = new Subject<void>();
 
-  // The async pipe subscribes when the dialog opens and unsubscribes when it closes (cancelling a pending call).
   protected readonly state$: Observable<HistoryState> = this.retry$.pipe(
     startWith(undefined),
     switchMap(() =>

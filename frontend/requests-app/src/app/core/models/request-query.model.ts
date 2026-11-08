@@ -8,7 +8,6 @@ export interface RequestSort {
   sortDirection: SortDirection;
 }
 
-// Null means "no filter". Dates are yyyy-MM-dd.
 export interface RequestFilters {
   status: RequestStatus | null;
   priority: RequestPriority | null;
@@ -18,7 +17,6 @@ export interface RequestFilters {
   createdTo: string | null;
 }
 
-/** Matches the query parameters of GET /api/requests (RequestsBL.Dtos.RequestQueryParameters). */
 export interface RequestQuery extends RequestFilters, RequestSort {
   search: string;
   page: number;
@@ -38,5 +36,4 @@ export const DEFAULT_SORT: RequestSort = { sortBy: 'createdAt', sortDirection: '
 
 export const DEFAULT_PAGE_SIZE = 20;
 
-// The API rejects page sizes above 100.
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];

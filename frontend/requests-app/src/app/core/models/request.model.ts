@@ -4,7 +4,6 @@ export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 export const REQUEST_PRIORITIES = ['Low', 'Medium', 'High'] as const;
 export type RequestPriority = (typeof REQUEST_PRIORITIES)[number];
 
-// Dates are UTC ISO strings.
 export interface RequestDto {
   id: number;
   title: string;
@@ -14,8 +13,6 @@ export interface RequestDto {
   assignedTo: string | null;
   createdAt: string;
   updatedAt: string;
-  // Base64; sent back when changing the status (optimistic concurrency).
   rowVersion: string;
-  // From the API's transition rules; empty when Completed.
   allowedNextStatuses: RequestStatus[];
 }

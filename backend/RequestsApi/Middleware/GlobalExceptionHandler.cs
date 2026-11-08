@@ -6,7 +6,6 @@ namespace RequestsApi.Middleware;
 
 public sealed class GlobalExceptionHandler : IExceptionHandler
 {
-    // Non-standard but widely used status for "client closed the connection" (nginx convention).
     private const int ClientClosedRequest = 499;
 
     private readonly IProblemDetailsService _problemDetailsService;
@@ -20,7 +19,6 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        // Client disconnected, not a server error; .NET 8 usually handles this before us, so this is a safety net.
         if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogInformation("Request {Method} {Path} was cancelled by the client.",
@@ -33,7 +31,6 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
         if (problemDetails.Status == StatusCodes.Status500InternalServerError)
         {
-            // Method and path only: no query string, headers or body, which may contain sensitive data.
             _logger.LogError(exception, "Unhandled exception for {Method} {Path}.",
                 httpContext.Request.Method, httpContext.Request.Path);
         }
@@ -69,7 +66,6 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             Title = "Conflict",
             Detail = conflict.Message
         },
-        // Never expose the real message or stack trace of unexpected errors.
         _ => new ProblemDetails
         {
             Status = StatusCodes.Status500InternalServerError,

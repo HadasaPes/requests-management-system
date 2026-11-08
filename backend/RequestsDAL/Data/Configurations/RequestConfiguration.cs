@@ -25,19 +25,14 @@ public class RequestConfiguration : IEntityTypeConfiguration<Request>
 
         builder.Property(r => r.RowVersion).IsRowVersion();
 
-        // Filter by status, sorted by creation date.
         builder.HasIndex(r => new { r.Status, r.CreatedAt });
 
-        // Filter by priority, sorted by creation date; composite so both the COUNT and the page query can seek.
         builder.HasIndex(r => new { r.Priority, r.CreatedAt });
 
-        // Search/filter by organization name (equality and prefix search).
         builder.HasIndex(r => r.OrganizationName);
 
-        // Filter by assignee (e.g. "my requests").
         builder.HasIndex(r => r.AssignedTo);
 
-        // Default list sort and date-range filters on creation date.
         builder.HasIndex(r => r.CreatedAt);
     }
 }

@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RequestStats } from '../../../../core/models/request-stats.model';
 import { REQUEST_PRIORITIES, REQUEST_STATUSES } from '../../../../core/models/request.model';
 
-// All requests; not affected by the list filters.
 @Component({
   selector: 'app-requests-stats',
   imports: [DecimalPipe],
@@ -12,7 +11,6 @@ import { REQUEST_PRIORITIES, REQUEST_STATUSES } from '../../../../core/models/re
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RequestsStats {
-  // Null while loading or if loading failed.
   readonly stats = input.required<RequestStats | null>();
   readonly failed = input(false);
 

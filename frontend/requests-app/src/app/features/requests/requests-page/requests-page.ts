@@ -45,7 +45,6 @@ import { PageChange, RequestsTable, StatusChange } from '../components/requests-
 interface ListState {
   query: RequestQuery | null;
   loading: boolean;
-  // Kept while the next page loads, so the table does not jump.
   result: PagedResponse<RequestDto> | null;
   error: ErrorMessage | null;
 }
@@ -62,7 +61,6 @@ const INITIAL_LIST_STATE: ListState = { query: null, loading: true, result: null
 const CONFLICT_MESSAGE =
   'This request was changed by someone else. The latest version was loaded. Please try again.';
 
-// Owns the list state; the child components only report user input.
 @Component({
   selector: 'app-requests-page',
   imports: [AsyncPipe, MatButtonModule, MatProgressBarModule, RequestsFilters, RequestsTable, RequestsStats],
@@ -77,21 +75,17 @@ export class RequestsPage {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly currentUser = inject(CurrentUserService);
 
-  // Each user input is a stream; the list is computed from all of them.
   private readonly searchText$ = new Subject<string>();
   private readonly filters$ = new BehaviorSubject<RequestFilters>(EMPTY_FILTERS);
   private readonly sort$ = new BehaviorSubject<RequestSort>(DEFAULT_SORT);
   private readonly pageSize$ = new BehaviorSubject<number>(DEFAULT_PAGE_SIZE);
   private readonly pageIndex$ = new Subject<number>();
-  // Retry button, or after a 404.
   private readonly reload$ = new Subject<void>();
-  // After an update or a conflict.
   private readonly rowReplaced$ = new Subject<RequestDto>();
   private readonly statsReload$ = new Subject<void>();
 
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set());
 
-  // The first (empty) value passes at once, so the list loads immediately.
   private readonly search$ = this.searchText$.pipe(
     debounceTime(300),
     map((text) => text.trim()),
@@ -99,7 +93,6 @@ export class RequestsPage {
     distinctUntilChanged(),
   );
 
-  // Search, filters, sort or page size start a new inner stream at page 1, so any change resets the page.
   private readonly query$: Observable<RequestQuery> = combineLatest({
     search: this.search$,
     filters: this.filters$,
@@ -114,10 +107,6 @@ export class RequestsPage {
     ),
   );
 
-  /**
-   * One request at a time: switchMap unsubscribes from the previous call when a new query arrives,
-   * which cancels the HTTP request, so an old, slower response can never overwrite a newer one.
-   */
   private readonly loads$: Observable<ListUpdate> = combineLatest([this.query$, this.reload$.pipe(startWith(undefined))]).pipe(
     switchMap(([query]) =>
       this.api.getRequests(query).pipe(
@@ -141,7 +130,6 @@ export class RequestsPage {
     scan((state, update) => update(state), INITIAL_LIST_STATE),
   );
 
-  /** Loaded at start and again after every successful update (the API invalidates its stats cache). */
   protected readonly stats$: Observable<StatsState> = this.statsReload$.pipe(
     startWith(undefined),
     switchMap(() =>
@@ -166,7 +154,7 @@ export class RequestsPage {
 
   protected onPageChange({ pageIndex, pageSize }: PageChange): void {
     if (pageSize !== this.pageSize$.value) {
-      this.pageSize$.next(pageSize); // back to page 1
+      this.pageSize$.next(pageSize);
     } else {
       this.pageIndex$.next(pageIndex);
     }
@@ -187,7 +175,6 @@ export class RequestsPage {
       .updateStatus(request.id, { status, rowVersion: request.rowVersion, changedBy })
       .pipe(
         map((updated) => ({ updated, conflict: false })),
-        // 409: load the latest version of this row only. The editor stays disabled until it arrives.
         catchError((error: unknown) =>
           isStatus(error, 409)
             ? this.api.getRequest(request.id).pipe(map((latest) => ({ updated: latest, conflict: true })))
@@ -203,13 +190,11 @@ export class RequestsPage {
             this.snackBar.open(CONFLICT_MESSAGE, 'OK', { duration: 8000 });
           } else {
             this.snackBar.open(`Request #${updated.id} is now ${updated.status}.`, undefined, { duration: 3000 });
-            // The reload drops the row if it no longer matches the filters, and fixes the sort order and totalCount.
             this.reload$.next();
             this.statsReload$.next();
           }
         },
         error: (error: unknown) => {
-          // 400 (for example a transition that is no longer allowed) or 404 (the request no longer exists).
           const { message, details } = toErrorMessage(error);
           this.snackBar.open(details.length ? details.join(' ') : message, 'OK', { duration: 8000 });
           if (isStatus(error, 404)) {

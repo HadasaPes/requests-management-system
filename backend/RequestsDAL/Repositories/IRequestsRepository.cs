@@ -14,7 +14,6 @@ public interface IRequestsRepository
 
     Task<IReadOnlyList<Request>> GetByIdsForUpdateAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken);
 
-    // Conflict if the RowVersion no longer matches; nothing is saved and the request is detached.
     Task<StatusUpdateResult> UpdateStatusAsync(
         Request request,
         RequestStatus newStatus,
