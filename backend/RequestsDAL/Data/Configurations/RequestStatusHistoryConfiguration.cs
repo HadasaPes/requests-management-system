@@ -13,7 +13,6 @@ public class RequestStatusHistoryConfiguration : IEntityTypeConfiguration<Reques
         builder.HasKey(h => h.Id);
         builder.Property(h => h.Id).UseIdentityColumn();
 
-        // byte-backed enums map to tinyint.
         builder.Property(h => h.PreviousStatus).HasColumnType("tinyint");
         builder.Property(h => h.NewStatus).HasColumnType("tinyint");
 
@@ -25,8 +24,7 @@ public class RequestStatusHistoryConfiguration : IEntityTypeConfiguration<Reques
             .HasForeignKey(h => h.RequestId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Show the status history of one request in chronological order.
-        // Also serves as the index for the RequestId foreign key.
+        // History of one request in order; also serves as the index for the RequestId foreign key.
         builder.HasIndex(h => new { h.RequestId, h.ChangedAt });
     }
 }

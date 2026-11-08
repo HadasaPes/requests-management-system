@@ -20,7 +20,6 @@ public class RequestsService : IRequestsService
     private static readonly TimeSpan StatsCacheDuration = TimeSpan.FromSeconds(60);
 
     // Incremented on every invalidation. Static because the service is scoped while the cache is shared.
-    // A stats calculation stores its result only if no invalidation happened while it ran.
     private static long _statsGeneration;
     private static readonly object StatsCacheLock = new();
 
@@ -77,7 +76,7 @@ public class RequestsService : IRequestsService
             // If a status changed while the query ran, these numbers may be old: return them, but do not cache them.
             if (_statsGeneration == generation)
             {
-                // Absolute expiration: the entry is dropped 60 s after it was stored, even if it is read often.
+                // Absolute, not sliding, so stats that are read often still refresh.
                 _cache.Set(StatsCacheKey, stats, StatsCacheDuration);
             }
         }
@@ -179,15 +178,11 @@ public class RequestsService : IRequestsService
             (outcome, new BulkStatusUpdateItemResultDto { Id = id, Outcome = outcome.ToString(), Error = error });
     }
 
-    /// <summary>
-    /// The one place where a status change is checked and saved; used by the single and the bulk update.
-    /// Does not throw for business outcomes and does not log, so each caller reports in its own way.
-    /// </summary>
+    // Returns the outcome instead of throwing or logging, so the single and the bulk update each report in their own way.
     private async Task<ChangeResult> ApplyStatusChangeAsync(
         Request request, RequestStatus newStatus, byte[] rowVersion, string changedBy, CancellationToken cancellationToken)
     {
-        // The client already has an old version: report a conflict before checking the workflow,
-        // so the client is not told "invalid transition" about a status it has not seen yet.
+        // Checked before the workflow, so the client is not told "invalid transition" about a status it has not seen.
         if (!request.RowVersion.SequenceEqual(rowVersion))
         {
             return new ChangeResult(ChangeOutcome.StaleRowVersion);
@@ -207,8 +202,7 @@ public class RequestsService : IRequestsService
             return new ChangeResult(ChangeOutcome.ConflictOnSave);
         }
 
-        // Every successful change (single or bulk item) goes through here, so the stats are never
-        // invalidated by a failed item, and a bulk with zero updates leaves the cache untouched.
+        // Only successful changes invalidate the stats; a bulk with zero updates leaves the cache untouched.
         lock (StatsCacheLock)
         {
             _statsGeneration++;

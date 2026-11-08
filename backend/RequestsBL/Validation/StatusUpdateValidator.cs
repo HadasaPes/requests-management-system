@@ -10,7 +10,6 @@ public record ValidBulkStatusUpdate(RequestStatus NewStatus, string ChangedBy, I
 
 public record ValidBulkItem(int Id, byte[] RowVersion);
 
-/// <summary>Validates the input of a status change (not the transition itself, see StatusTransitions).</summary>
 public static class StatusUpdateValidator
 {
     public const int MaxChangedByLength = 100;
@@ -19,7 +18,6 @@ public static class StatusUpdateValidator
     // SQL Server rowversion is always 8 bytes.
     private const int RowVersionLength = 8;
 
-    /// <exception cref="ValidationException">One or more fields are invalid; all errors are reported together.</exception>
     public static ValidStatusUpdate Validate(UpdateStatusRequestDto dto)
     {
         var errors = new Dictionary<string, string[]>();
@@ -36,8 +34,7 @@ public static class StatusUpdateValidator
         return new ValidStatusUpdate(status!.Value, rowVersion!, changedBy!);
     }
 
-    /// <summary>Validates the whole bulk request; if anything is invalid, no item is processed.</summary>
-    /// <exception cref="ValidationException">One or more fields are invalid; all errors are reported together.</exception>
+    // If anything in the request is invalid, no item is processed.
     public static ValidBulkStatusUpdate ValidateBulk(BulkStatusUpdateRequestDto dto)
     {
         var errors = new Dictionary<string, string[]>();

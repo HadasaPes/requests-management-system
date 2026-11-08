@@ -5,7 +5,6 @@ using RequestsDAL.Repositories;
 
 namespace RequestsBL.Mapping;
 
-/// <summary>The single place where Request data from the DAL is converted to DTOs.</summary>
 public static class RequestMappings
 {
     public static RequestDto ToDto(this Request request) => new()

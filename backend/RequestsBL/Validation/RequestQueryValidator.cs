@@ -5,7 +5,6 @@ using RequestsDAL.Repositories;
 
 namespace RequestsBL.Validation;
 
-/// <summary>Validates list query parameters and converts them into a DAL query.</summary>
 public static class RequestQueryValidator
 {
     public const int MaxPageSize = 100;
@@ -14,7 +13,6 @@ public static class RequestQueryValidator
     // Guards against int overflow in (page - 1) * pageSize.
     public const int MaxPage = 1_000_000;
 
-    /// <exception cref="ValidationException">One or more parameters are invalid; all errors are reported together.</exception>
     public static RequestQuery ToQuery(RequestQueryParameters parameters)
     {
         var errors = new Dictionary<string, string[]>();
@@ -92,9 +90,7 @@ public static class RequestQueryValidator
         { } utc => utc
     };
 
-    // createdTo is inclusive for clients. A date without a time part (e.g. 2025-01-31) means the whole day,
-    // so the bound is the start of the next day; otherwise it is the exact time plus one tick
-    // (datetime2(7) resolution), so "< bound" equals "<= createdTo".
+    // createdTo is inclusive: a date-only value covers the whole day, otherwise add one tick (datetime2 resolution).
     private static DateTime? ToExclusiveUpperBound(DateTime? createdTo) => createdTo switch
     {
         null => null,

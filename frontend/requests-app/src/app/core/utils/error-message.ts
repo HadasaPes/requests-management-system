@@ -3,11 +3,9 @@ import { ProblemDetails } from '../models/problem-details.model';
 
 export interface ErrorMessage {
   message: string;
-  /** Field validation messages (400), if any. */
   details: string[];
 }
 
-/** Turns an HTTP error into a message for the user, taken from the API's ProblemDetails when possible. */
 export function toErrorMessage(error: unknown): ErrorMessage {
   if (error instanceof HttpErrorResponse) {
     if (error.status === 0) {

@@ -14,7 +14,6 @@ public class RequestsDbContext : DbContext
 
     public DbSet<RequestStatusHistory> RequestStatusHistory => Set<RequestStatusHistory>();
 
-    // Applies every IEntityTypeConfiguration in Data/Configurations.
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

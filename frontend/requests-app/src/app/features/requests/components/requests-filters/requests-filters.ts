@@ -9,7 +9,7 @@ import { distinctUntilChanged, map } from 'rxjs';
 import { RequestFilters } from '../../../../core/models/request-query.model';
 import { REQUEST_PRIORITIES, REQUEST_STATUSES, RequestPriority, RequestStatus } from '../../../../core/models/request.model';
 
-/** Search box and filters. Reports changes only; the page decides what to load. */
+// Reports changes only; the page decides what to load.
 @Component({
   selector: 'app-requests-filters',
   imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule],
@@ -33,10 +33,10 @@ export class RequestsFilters {
     createdTo: new FormControl<string | null>(null),
   });
 
-  /** Every keystroke; the page debounces it. */
+  // Every keystroke; the page debounces it.
   readonly searchChange = outputFromObservable(this.search.valueChanges);
 
-  /** Only when a filter really changed (for example, Enter and then blur on the same value emits once). */
+  // Only on a real change (Enter and then blur on the same value emits once).
   readonly filtersChange = outputFromObservable(
     this.form.valueChanges.pipe(
       map(() => toFilters(this.form.getRawValue())),
@@ -44,7 +44,7 @@ export class RequestsFilters {
     ),
   );
 
-  /** Enter applies a text filter by leaving the field (updateOn: 'blur'). */
+  // Enter applies a text filter by leaving the field (updateOn: 'blur').
   protected apply(event: Event): void {
     (event.target as HTMLInputElement).blur();
   }
@@ -55,7 +55,6 @@ export class RequestsFilters {
   }
 }
 
-/** Empty or blank text becomes null (no filter). */
 function toFilters(value: RequestFilters): RequestFilters {
   return {
     ...value,

@@ -3,7 +3,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RequestStatus } from '../../../../core/models/request.model';
 
-/** The current status as a menu button; the menu lists only the statuses the API allows next. */
+// The menu lists only the statuses the API allows next.
 @Component({
   selector: 'app-status-editor',
   imports: [MatMenuModule, MatProgressSpinnerModule],
@@ -14,12 +14,12 @@ import { RequestStatus } from '../../../../core/models/request.model';
 export class StatusEditor {
   readonly status = input.required<RequestStatus>();
   readonly allowedNext = input.required<RequestStatus[]>();
-  /** False until the user entered a name. */
+  // False until the user entered a name.
   readonly canEdit = input.required<boolean>();
-  /** True while this row's update is in flight, to prevent a double submit. */
+  // True while this row's update is in flight, to prevent a double submit.
   readonly saving = input(false);
 
-  /** Only reports the choice; the page sends the update. */
+  // Only reports the choice; the page sends the update.
   readonly statusSelected = output<RequestStatus>();
 
   protected readonly disabled = computed(() => this.saving() || !this.canEdit() || this.allowedNext().length === 0);

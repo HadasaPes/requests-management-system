@@ -14,13 +14,12 @@ public class Request
 
     public string? AssignedTo { get; set; }
 
-    /// <summary>UTC.</summary>
+    // UTC.
     public DateTime CreatedAt { get; set; }
 
-    /// <summary>UTC.</summary>
+    // UTC.
     public DateTime UpdatedAt { get; set; }
 
-    /// <summary>SQL Server rowversion, used for optimistic concurrency.</summary>
     public byte[] RowVersion { get; set; } = [];
 
     public ICollection<RequestStatusHistory> StatusHistory { get; set; } = new List<RequestStatusHistory>();

@@ -1,6 +1,5 @@
 import { RequestPriority, RequestStatus } from './request.model';
 
-/** The sort fields the API accepts (sortBy). */
 export type RequestSortField = 'createdAt' | 'updatedAt' | 'priority' | 'status' | 'title' | 'organizationName';
 export type SortDirection = 'asc' | 'desc';
 
@@ -9,7 +8,7 @@ export interface RequestSort {
   sortDirection: SortDirection;
 }
 
-/** Filters other than the free-text search. Null means "no filter". Dates are yyyy-MM-dd. */
+// Null means "no filter". Dates are yyyy-MM-dd.
 export interface RequestFilters {
   status: RequestStatus | null;
   priority: RequestPriority | null;
@@ -39,5 +38,5 @@ export const DEFAULT_SORT: RequestSort = { sortBy: 'createdAt', sortDirection: '
 
 export const DEFAULT_PAGE_SIZE = 20;
 
-/** The API rejects page sizes above 100. */
+// The API rejects page sizes above 100.
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];

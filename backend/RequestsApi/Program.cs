@@ -19,7 +19,7 @@ builder.Services.AddProblemDetails(options =>
     });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-// The Angular dev server runs on another origin; production would serve the app from the API's origin or configure its own origins.
+// The Angular dev server runs on another origin, so CORS is enabled in Development only.
 const string DevFrontendCorsPolicy = "DevFrontend";
 if (builder.Environment.IsDevelopment())
 {
@@ -42,14 +42,12 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Before the exception handler, so error responses (ProblemDetails) also get the CORS headers
-// and the Angular app can read their message.
+// Before the exception handler, so error responses also get the CORS headers.
 if (app.Environment.IsDevelopment())
 {
     app.UseCors(DevFrontendCorsPolicy);
 }
 
-// Catches exceptions from everything after it.
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
@@ -58,8 +56,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Not in Development: a redirect from http to https on a cross-origin request makes the browser send Origin: null,
-// so CORS blocks the Angular dev server. With this, the app works with both the http and the https launch profile.
+// Not in Development: an http->https redirect makes the browser send Origin: null, which CORS blocks.
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();

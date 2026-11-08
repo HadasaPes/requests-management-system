@@ -4,7 +4,7 @@ export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 export const REQUEST_PRIORITIES = ['Low', 'Medium', 'High'] as const;
 export type RequestPriority = (typeof REQUEST_PRIORITIES)[number];
 
-/** Matches RequestsBL.Dtos.RequestDto. Dates are UTC ISO strings. */
+// Dates are UTC ISO strings.
 export interface RequestDto {
   id: number;
   title: string;
@@ -14,8 +14,8 @@ export interface RequestDto {
   assignedTo: string | null;
   createdAt: string;
   updatedAt: string;
-  /** Base64; sent back when changing the status (optimistic concurrency). */
+  // Base64; sent back when changing the status (optimistic concurrency).
   rowVersion: string;
-  /** The statuses this request can be changed to next, from the API's transition rules (empty when Completed). */
+  // From the API's transition rules; empty when Completed.
   allowedNextStatuses: RequestStatus[];
 }

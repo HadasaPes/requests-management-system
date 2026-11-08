@@ -45,7 +45,7 @@ import { PageChange, RequestsTable, StatusChange } from '../components/requests-
 interface ListState {
   query: RequestQuery | null;
   loading: boolean;
-  /** The last loaded page; kept while the next one loads, so the table does not jump. */
+  // Kept while the next page loads, so the table does not jump.
   result: PagedResponse<RequestDto> | null;
   error: ErrorMessage | null;
 }
@@ -55,7 +55,6 @@ interface StatsState {
   failed: boolean;
 }
 
-/** A change to the list state: either a load step or a single row replaced after an update. */
 type ListUpdate = (state: ListState) => ListState;
 
 const INITIAL_LIST_STATE: ListState = { query: null, loading: true, result: null, error: null };
@@ -63,7 +62,7 @@ const INITIAL_LIST_STATE: ListState = { query: null, loading: true, result: null
 const CONFLICT_MESSAGE =
   'This request was changed by someone else. The latest version was loaded. Please try again.';
 
-/** Owns the list state: turns user input into API calls and the responses into what the view shows. */
+// Owns the list state; the child components only report user input.
 @Component({
   selector: 'app-requests-page',
   imports: [AsyncPipe, MatButtonModule, MatProgressBarModule, RequestsFilters, RequestsTable, RequestsStats],
@@ -78,22 +77,21 @@ export class RequestsPage {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly currentUser = inject(CurrentUserService);
 
-  // User input. Each one is a stream; the list below is computed from all of them.
+  // Each user input is a stream; the list is computed from all of them.
   private readonly searchText$ = new Subject<string>();
   private readonly filters$ = new BehaviorSubject<RequestFilters>(EMPTY_FILTERS);
   private readonly sort$ = new BehaviorSubject<RequestSort>(DEFAULT_SORT);
   private readonly pageSize$ = new BehaviorSubject<number>(DEFAULT_PAGE_SIZE);
   private readonly pageIndex$ = new Subject<number>();
-  /** Reloads the current page (Retry button, or after a 404). */
+  // Retry button, or after a 404.
   private readonly reload$ = new Subject<void>();
-  /** A single row to replace in place (after an update or a conflict). */
+  // After an update or a conflict.
   private readonly rowReplaced$ = new Subject<RequestDto>();
   private readonly statsReload$ = new Subject<void>();
 
-  /** Ids of rows with an update in flight; their editors are disabled. */
   protected readonly savingIds = signal<ReadonlySet<number>>(new Set());
 
-  /** Only the search text is debounced; the first (empty) value is used at once so the list loads immediately. */
+  // The first (empty) value passes at once, so the list loads immediately.
   private readonly search$ = this.searchText$.pipe(
     debounceTime(300),
     map((text) => text.trim()),
@@ -101,10 +99,7 @@ export class RequestsPage {
     distinctUntilChanged(),
   );
 
-  /**
-   * The query to load. Any change of search, filters, sort or page size starts a new inner stream at page 1;
-   * page changes only move within it. So "changing a filter resets to page 1" needs no extra code.
-   */
+  // Search, filters, sort or page size start a new inner stream at page 1, so any change resets the page.
   private readonly query$: Observable<RequestQuery> = combineLatest({
     search: this.search$,
     filters: this.filters$,
@@ -208,8 +203,7 @@ export class RequestsPage {
             this.snackBar.open(CONFLICT_MESSAGE, 'OK', { duration: 8000 });
           } else {
             this.snackBar.open(`Request #${updated.id} is now ${updated.status}.`, undefined, { duration: 3000 });
-            // The row is shown at once above; reloading the current page then drops it if it no longer
-            // matches the filters, and fixes the sort order and totalCount.
+            // The reload drops the row if it no longer matches the filters, and fixes the sort order and totalCount.
             this.reload$.next();
             this.statsReload$.next();
           }

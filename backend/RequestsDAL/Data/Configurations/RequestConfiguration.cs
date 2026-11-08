@@ -17,7 +17,6 @@ public class RequestConfiguration : IEntityTypeConfiguration<Request>
         builder.Property(r => r.OrganizationName).HasMaxLength(200).IsRequired();
         builder.Property(r => r.AssignedTo).HasMaxLength(100);
 
-        // byte-backed enums map to tinyint.
         builder.Property(r => r.Status).HasColumnType("tinyint");
         builder.Property(r => r.Priority).HasColumnType("tinyint");
 
@@ -26,11 +25,10 @@ public class RequestConfiguration : IEntityTypeConfiguration<Request>
 
         builder.Property(r => r.RowVersion).IsRowVersion();
 
-        // Filter by status, newest/oldest first (e.g. "all New requests, sorted by creation date").
+        // Filter by status, sorted by creation date.
         builder.HasIndex(r => new { r.Status, r.CreatedAt });
 
-        // Filter by priority, newest/oldest first (e.g. "all High priority requests, sorted by creation date").
-        // Composite like the status index, so both the COUNT and the page query can seek (see docs/performance.md).
+        // Filter by priority, sorted by creation date; composite so both the COUNT and the page query can seek.
         builder.HasIndex(r => new { r.Priority, r.CreatedAt });
 
         // Search/filter by organization name (equality and prefix search).

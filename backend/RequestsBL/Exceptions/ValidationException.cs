@@ -1,6 +1,5 @@
 namespace RequestsBL.Exceptions;
 
-/// <summary>Thrown when input is invalid. Holds the error messages per field.</summary>
 public class ValidationException : Exception
 {
     public ValidationException(IDictionary<string, string[]> errors)

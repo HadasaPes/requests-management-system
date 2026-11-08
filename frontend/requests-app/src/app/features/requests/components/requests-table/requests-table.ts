@@ -18,7 +18,7 @@ export interface StatusChange {
   status: RequestStatus;
 }
 
-/** Shows one page of requests. Sorting, paging, status changes and history are only reported; the page does the work. */
+// Sorting, paging, status changes and history are only reported; the page does the work.
 @Component({
   selector: 'app-requests-table',
   imports: [DatePipe, MatTableModule, MatSortModule, MatPaginatorModule, MatButtonModule, StatusEditor],
@@ -29,13 +29,12 @@ export interface StatusChange {
 export class RequestsTable {
   readonly items = input.required<RequestDto[]>();
   readonly totalCount = input.required<number>();
-  /** 1-based, like the API. */
+  // 1-based, like the API.
   readonly page = input.required<number>();
   readonly pageSize = input.required<number>();
   readonly sort = input.required<RequestSort>();
-  /** False until the user entered a name. */
+  // False until the user entered a name.
   readonly canEdit = input.required<boolean>();
-  /** Ids of the rows whose status update is in flight. */
   readonly savingIds = input.required<ReadonlySet<number>>();
 
   readonly sortChange = output<RequestSort>();

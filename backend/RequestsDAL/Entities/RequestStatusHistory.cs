@@ -12,7 +12,7 @@ public class RequestStatusHistory
 
     public RequestStatus NewStatus { get; set; }
 
-    /// <summary>UTC.</summary>
+    // UTC.
     public DateTime ChangedAt { get; set; }
 
     public string ChangedBy { get; set; } = string.Empty;

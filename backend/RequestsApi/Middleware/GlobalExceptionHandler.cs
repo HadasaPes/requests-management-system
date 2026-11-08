@@ -4,10 +4,6 @@ using RequestsBL.Exceptions;
 
 namespace RequestsApi.Middleware;
 
-/// <summary>
-/// Turns exceptions into RFC 7807 ProblemDetails responses.
-/// Known BL exceptions map to 4xx with their (client-safe) message; anything else is a generic 500.
-/// </summary>
 public sealed class GlobalExceptionHandler : IExceptionHandler
 {
     // Non-standard but widely used status for "client closed the connection" (nginx convention).
@@ -24,9 +20,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        // The client disconnected: nobody is waiting for a response, and it is not a server error.
-        // In .NET 8 ExceptionHandlerMiddleware usually handles this case itself (499, Debug log)
-        // before calling us; this is a safety net in case it reaches the handler.
+        // Client disconnected, not a server error; .NET 8 usually handles this before us, so this is a safety net.
         if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogInformation("Request {Method} {Path} was cancelled by the client.",

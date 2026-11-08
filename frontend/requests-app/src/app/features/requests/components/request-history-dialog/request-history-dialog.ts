@@ -18,7 +18,7 @@ type HistoryState =
   | { kind: 'loaded'; entries: RequestStatusHistoryDto[] }
   | { kind: 'error'; error: ErrorMessage };
 
-/** Status change history of one request, newest first. Opened with MatDialog; loads its own data. */
+// Opened with MatDialog; loads its own data.
 @Component({
   selector: 'app-request-history-dialog',
   imports: [AsyncPipe, DatePipe, MatDialogModule, MatButtonModule, MatProgressBarModule],

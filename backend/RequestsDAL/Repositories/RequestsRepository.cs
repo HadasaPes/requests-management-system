@@ -16,7 +16,6 @@ public class RequestsRepository : IRequestsRepository
 
     public async Task<PagedResult<Request>> GetPagedAsync(RequestQuery query, CancellationToken cancellationToken)
     {
-        // Nothing runs until CountAsync / ToListAsync: the IQueryable is translated to SQL.
         var filtered = ApplyFilters(_dbContext.Requests.AsNoTracking(), query);
 
         var totalCount = await filtered.CountAsync(cancellationToken);
@@ -40,8 +39,7 @@ public class RequestsRepository : IRequestsRepository
 
     public async Task<RequestCounts> GetCountsAsync(CancellationToken cancellationToken)
     {
-        // One round trip: GROUP BY (Status, Priority) returns at most 4 x 3 = 12 small rows.
-        // The per-status and per-priority totals are then summed from those rows, never from requests.
+        // One GROUP BY (Status, Priority) round trip returns at most 12 rows; the totals are summed from them.
         var groups = await _dbContext.Requests
             .GroupBy(r => new { r.Status, r.Priority })
             .Select(g => new { g.Key.Status, g.Key.Priority, Count = g.Count() })
@@ -83,8 +81,7 @@ public class RequestsRepository : IRequestsRepository
         request.Status = newStatus;
         request.UpdatedAt = changedAtUtc;
 
-        // The client's RowVersion becomes the "original" value, so EF generates
-        // UPDATE ... WHERE [Id] = @id AND [RowVersion] = @expectedRowVersion.
+        // The client's RowVersion becomes the original value, so the UPDATE's WHERE checks it.
         _dbContext.Entry(request).Property(r => r.RowVersion).OriginalValue = expectedRowVersion;
 
         try
@@ -95,10 +92,7 @@ public class RequestsRepository : IRequestsRepository
         }
         catch (DbUpdateConcurrencyException)
         {
-            // The UPDATE matched 0 rows: someone else changed the request. Everything was rolled back.
-            // Detach only this request and its history row, so a later SaveChanges on this context
-            // (the next item of a bulk update) does not try to save them again. Other tracked
-            // requests stay tracked; ChangeTracker.Clear() would detach them too.
+            // Detach only this request and its history row, so the next bulk item's SaveChanges does not retry them.
             _dbContext.Entry(history).State = EntityState.Detached;
             _dbContext.Entry(request).State = EntityState.Detached;
             return StatusUpdateResult.Conflict;

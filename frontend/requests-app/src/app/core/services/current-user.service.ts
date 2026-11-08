@@ -1,12 +1,9 @@
 import { Injectable, computed, signal } from '@angular/core';
 
-/** Max length of changedBy in the API. */
+// Must match the API's changedBy limit.
 export const MAX_USER_NAME_LENGTH = 100;
 
-/**
- * The name sent as changedBy. Kept in memory only (lost on reload).
- * There is no authentication, so the API cannot verify it (see docs/known-limitations.md).
- */
+// In memory only; there is no authentication, so the API cannot verify the name.
 @Injectable({ providedIn: 'root' })
 export class CurrentUserService {
   private readonly nameSignal = signal('');
